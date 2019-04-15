@@ -74,9 +74,9 @@ FORM_FIELDS = [
     "description", "reason", "size", "species", "breed", "agegroup", "color", "colour", 
     "arealost", "areafound", "areapostcode", "areazipcode",
     "animalname", "reserveanimalname",
-    "callnotes", "dispatchaddress", "dispatchcity", "dispatchstate", "dispatchzipcode",
-    "transporttype", "pickupaddress", "pickuptown", "pickupcity", "pickupcounty", "pickupstate", "pickuppostcode", "pickupzipcode", "pickupdate", "pickuptime",
-    "dropoffaddress", "dropofftown", "dropoffcity", "dropoffcounty", "dropoffstate", "dropoffpostcode", "dropoffzipcode", "dropoffdate", "dropofftime"
+    "callnotes", "dispatchaddress", "dispatchcity", "dispatchstate", "dispatchzipcode", "transporttype", 
+    "pickupaddress", "pickuptown", "pickupcity", "pickupcounty", "pickupstate", "pickuppostcode", "pickupzipcode", "pickupcountry", "pickupdate", "pickuptime",
+    "dropoffaddress", "dropofftown", "dropoffcity", "dropoffcounty", "dropoffstate", "dropoffpostcode", "dropoffzipcode", "dropoffcountry", "dropoffdate", "dropofftime"
 ]
 
 class FormHTMLParser(HTMLParser):
@@ -197,7 +197,9 @@ def get_onlineform_html(dbo, formid, completedocument = True):
         elif f.FIELDTYPE == FIELDTYPE_SHELTERANIMAL:
             h.append('<select class="asm-onlineform-shelteranimal" name="%s" title="%s" %s>' % ( html.escape(fname), utils.nulltostr(f.TOOLTIP), required))
             h.append('<option></option>')
-            for a in animal.get_animals_on_shelter_namecode(dbo):
+            rs = animal.get_animals_on_shelter_namecode(dbo)
+            rs = sorted(rs, key=lambda k: k["ANIMALNAME"])
+            for a in rs:
                 h.append('<option value="%(name)s::%(code)s">%(name)s (%(species)s - %(code)s)</option>' % \
                     { "name": a.ANIMALNAME, "code": a.SHELTERCODE, "species": a.SPECIESNAME})
             h.append('</select>')
@@ -206,6 +208,7 @@ def get_onlineform_html(dbo, formid, completedocument = True):
             h.append('<option></option>')
             pc = publishers.base.PublishCriteria(configuration.publisher_presets(dbo))
             rs = publishers.base.get_animal_data(dbo, pc, include_additional_fields = True)
+            rs = sorted(rs, key=lambda k: k["ANIMALNAME"])
             for a in rs:
                 h.append('<option value="%(name)s::%(code)s">%(name)s (%(species)s - %(code)s)</option>' % \
                     { "name": a.ANIMALNAME, "code": a.SHELTERCODE, "species": a.SPECIESNAME})
@@ -213,6 +216,7 @@ def get_onlineform_html(dbo, formid, completedocument = True):
         elif f.FIELDTYPE == FIELDTYPE_GDPR_CONTACT_OPTIN:
             h.append('<input type="hidden" name="%s" value="" />' % html.escape(fname))
             h.append('<select class="asm-onlineform-gdprcontactoptin asm-onlineform-lookupmulti" multiple="multiple" data-name="%s" data-required="%s" title="%s">' % ( html.escape(fname), utils.iif(required != "", "required", ""), utils.nulltostr(f.TOOLTIP)))
+            h.append('<option value="declined">%s</option>' % i18n._("Declined", l))
             h.append('<option value="email">%s</option>' % i18n._("Email", l))
             h.append('<option value="post">%s</option>' % i18n._("Post", l))
             h.append('<option value="sms">%s</option>' % i18n._("SMS", l))
@@ -711,7 +715,7 @@ def insert_onlineformincoming_from_form(dbo, post, remoteip):
             "INNER JOIN onlineformincoming oi ON oi.FormName = o.Name " \
             "WHERE oi.CollationID = ?", [collationid])
         body += "\n" + get_onlineformincoming_html_print(dbo, [collationid,])
-        utils.send_email(dbo, configuration.email(dbo), submitteremail, "", i18n._("Submission received: {0}", l).format(formname), body, "html")
+        utils.send_email(dbo, configuration.email(dbo), submitteremail, "", "", i18n._("Submission received: {0}", l).format(formname), body, "html", exceptions=False)
 
     # Did the original form specify some email addresses to send 
     # incoming submissions to?
@@ -722,16 +726,16 @@ def insert_onlineformincoming_from_form(dbo, post, remoteip):
         # If a submitter email is set, use that to reply to instead
         replyto = submitteremail 
         if replyto == "": replyto = configuration.email(dbo)
-        utils.send_email(dbo, replyto, email, "", "%s - %s" % (formname, ", ".join(preview)), 
-            get_onlineformincoming_html_print(dbo, [collationid,]), "html")
+        utils.send_email(dbo, replyto, email, "", "", "%s - %s" % (formname, ", ".join(preview)), 
+            get_onlineformincoming_html_print(dbo, [collationid,]), "html", exceptions=False)
 
     # Did the form submission have a value in an "emailsubmissionto" field?
     if emailsubmissionto is not None and emailsubmissionto.strip() != "":
         # If a submitter email is set, use that to reply to instead
         replyto = submitteremail 
         if replyto == "": replyto = configuration.email(dbo)
-        utils.send_email(dbo, replyto, emailsubmissionto, "", "%s - %s" % (formname, ", ".join(preview)), 
-            get_onlineformincoming_html_print(dbo, [collationid,]), "html")
+        utils.send_email(dbo, replyto, emailsubmissionto, "", "", "%s - %s" % (formname, ", ".join(preview)), 
+            get_onlineformincoming_html_print(dbo, [collationid,]), "html", exceptions=False)
 
     return collationid
 
@@ -851,6 +855,7 @@ def create_person(dbo, username, collationid):
         if f.FIELDNAME == "excludefrombulkemail" and f.VALUE != "" and f.VALUE != i18n._("No", l): d["excludefrombulkemail"] = "on"
         if f.FIELDNAME == "gdprcontactoptin": d["gdprcontactoptin"] = f.VALUE
         if f.FIELDNAME.startswith("reserveanimalname"): d[f.FIELDNAME] = f.VALUE
+        if f.FIELDNAME.startswith("additional"): d[f.FIELDNAME] = f.VALUE
         if f.FIELDNAME == "formreceived" and f.VALUE.find(" ") != -1: 
             recdate, rectime = f.VALUE.split(" ")
             formreceived = i18n.parse_time( i18n.display2python(l, recdate), rectime )
@@ -868,6 +873,9 @@ def create_person(dbo, username, collationid):
             personid = similar[0].ID
             # Merge flags and any extra details
             person.merge_flags(dbo, username, personid, flags)
+            # NOTE: Do not do this in future - delete_values_for_link is called so even if you only wanted
+            # to update fields present in the form, this call will delete ALL of them.
+            # additional.save_values_for_link(dbo, utils.PostedData(d, dbo.locale), personid, "person")
             if "gdprcontactoptin" in d: person.merge_gdpr_flags(dbo, "import", personid, d["gdprcontactoptin"])
             person.merge_person_details(dbo, username, personid, d)
     # Create the person record if we didn't find one
@@ -1029,6 +1037,7 @@ def create_transport(dbo, username, collationid):
         if f.FIELDNAME == "pickupstate": d["pickupcounty"] = f.VALUE
         if f.FIELDNAME == "pickuppostcode": d["pickuppostcode"] = f.VALUE
         if f.FIELDNAME == "pickupzipcode": d["pickuppostcode"] = f.VALUE
+        if f.FIELDNAME == "pickupcountry": d["pickupcountry"] = f.VALUE
         if f.FIELDNAME == "pickupdate": d["pickupdate"] = f.VALUE
         if f.FIELDNAME == "pickuptime": d["pickuptime"] = f.VALUE
         if f.FIELDNAME == "dropoffaddress": d["dropoffaddress"] = f.VALUE
@@ -1038,6 +1047,7 @@ def create_transport(dbo, username, collationid):
         if f.FIELDNAME == "dropoffstate": d["dropoffcounty"] = f.VALUE
         if f.FIELDNAME == "dropoffpostcode": d["dropoffpostcode"] = f.VALUE
         if f.FIELDNAME == "dropoffzipcode": d["dropoffpostcode"] = f.VALUE
+        if f.FIELDNAME == "dropoffcountry": d["dropoffcountry"] = f.VALUE
         if f.FIELDNAME == "dropoffdate": d["dropoffdate"] = f.VALUE
         if f.FIELDNAME == "dropofftime": d["dropofftime"] = f.VALUE
         if f.FIELDNAME == "transporttype": d["type"] = guess_transporttype(dbo, f.VALUE)

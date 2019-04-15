@@ -288,7 +288,7 @@ class Database(object):
             return rv
         except Exception as err:
             al.error(str(err), "Database.execute", self, sys.exc_info())
-            al.error("failing sql: %s" % sql, "Database.execute", self)
+            al.error("failing sql: %s %s" % (sql, params), "Database.execute", self)
             try:
                 # An error can leave a connection in unusable state, 
                 # rollback any attempted changes.
@@ -331,7 +331,7 @@ class Database(object):
             return rv
         except Exception as err:
             al.error(str(err), "Database.execute_many", self, sys.exc_info())
-            al.error("failing sql: %s" % sql, "Database.execute_many", self)
+            al.error("failing sql: %s %s" % (sql, params), "Database.execute_many", self)
             try:
                 # An error can leave a connection in unusable state, 
                 # rollback any attempted changes.
@@ -409,7 +409,7 @@ class Database(object):
         sql = "INSERT INTO %s (%s) VALUES (%s)" % ( table, ",".join(values.iterkeys()), self.sql_placeholders(values) )
         self.execute(sql, values.values(), override_lock=setOverrideDBLock)
         if writeAudit and iid != 0 and user != "":
-            audit.create(self, user, table, iid, audit.dump_row(self, table, iid))
+            audit.create(self, user, table, iid, audit.get_parent_links(values, table), audit.dump_row(self, table, iid))
         return iid
 
     def update(self, table, where, values, user="", setOverrideDBLock=False, setRecordVersion=True, setLastChanged=True, writeAudit=True):
@@ -438,7 +438,7 @@ class Database(object):
         if iid > 0:
             postaudit = self.query_row(table, iid)
         if user != "" and iid > 0 and writeAudit: 
-            audit.edit(self, user, table, iid, audit.map_diff(preaudit, postaudit))
+            audit.edit(self, user, table, iid, audit.get_parent_links(values, table), audit.map_diff(preaudit, postaudit))
         return rows_affected
 
     def delete(self, table, where, user="", writeAudit=True):
@@ -562,7 +562,7 @@ class Database(object):
             return l
         except Exception as err:
             al.error(str(err), "Database.query", self, sys.exc_info())
-            al.error("failing sql: %s" % sql, "Database.query", self)
+            al.error("failing sql: %s %s" % (sql, params), "Database.query", self)
             raise err
         finally:
             try:
@@ -610,7 +610,7 @@ class Database(object):
             return cn
         except Exception as err:
             al.error(str(err), "Database.query_columns", self, sys.exc_info())
-            al.error("failing sql: %s" % sql, "Database.query_columns", self)
+            al.error("failing sql: %s %s" % (sql, params), "Database.query_columns", self)
             raise err
         finally:
             try:
@@ -660,7 +660,7 @@ class Database(object):
             self.cursor_close(c, s)
         except Exception as err:
             al.error(str(err), "Database.query_generator", self, sys.exc_info())
-            al.error("failing sql: %s" % sql, "Database.query_generator", self)
+            al.error("failing sql: %s %s" % (sql, params), "Database.query_generator", self)
             raise err
         finally:
             try:
@@ -729,7 +729,7 @@ class Database(object):
             return d
         except Exception as err:
             al.error(str(err), "Database.query_tuple", self, sys.exc_info())
-            al.error("failing sql: %s" % sql, "Database.query_tuple", self)
+            al.error("failing sql: %s %s" % (sql, params), "Database.query_tuple", self)
             raise err
         finally:
             try:
@@ -762,7 +762,7 @@ class Database(object):
             return (d, cn)
         except Exception as err:
             al.error(str(err), "Database.query_tuple_columns", self, sys.exc_info())
-            al.error("failing sql: %s" % sql, "Database.query_tuple_columns", self)
+            al.error("failing sql: %s %s" % (sql, params), "Database.query_tuple_columns", self)
             raise err
         finally:
             try:
@@ -867,6 +867,10 @@ class Database(object):
             s = "%04d-%02d-%02d" % ( d.year, d.month, d.day )
         if wrapParens: return "'%s'" % s
         return s
+
+    def sql_greatest(self, items):
+        """ Writes greatest for a list of items """
+        return "GREATEST(%s)" % ",".join(items)
 
     def sql_placeholders(self, l):
         """ Writes enough ? placeholders for items in l """

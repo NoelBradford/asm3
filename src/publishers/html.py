@@ -98,7 +98,7 @@ def animals_to_page(dbo, animals, style="", speciesid=0, animaltypeid=0, locatio
         if configuration.publisher_use_comments(dbo):
             a.WEBSITEMEDIANOTES = a.ANIMALCOMMENTS
         # Add extra publishing text, preserving the line endings
-        notes = utils.nulltostr(a.WEBSITEMEDIANOTES)
+        notes = utils.nulltostr(a.WEBSITEMEDIANOTES).replace("\n", "<br/>")
         notes += configuration.third_party_publisher_sig(dbo).replace("\n", "<br/>")
         tags["WEBMEDIANOTES"] = notes 
         tags["WEBSITEMEDIANOTES"] = notes # Compatibility, both are valid in wordprocessor.py
@@ -126,13 +126,9 @@ def get_animal_view(dbo, animalid):
     s = head + body + foot
     tags = wordprocessor.animal_tags_publisher(dbo, a)
     tags = wordprocessor.append_tags(tags, wordprocessor.org_tags(dbo, "system"))
-    # Add extra tags for websitemedianame2-4 if they exist
-    if a.WEBSITEIMAGECOUNT > 1: 
-        tags["WEBMEDIAFILENAME2"] = "%s&seq=2" % a.WEBSITEMEDIANAME
-    if a.WEBSITEIMAGECOUNT > 2: 
-        tags["WEBMEDIAFILENAME3"] = "%s&seq=3" % a.WEBSITEMEDIANAME
-    if a.WEBSITEIMAGECOUNT > 3: 
-        tags["WEBMEDIAFILENAME4"] = "%s&seq=4" % a.WEBSITEMEDIANAME
+    # Add extra tags for websitemedianame2-10 if they exist
+    for x in range(2, 11):
+        if a.WEBSITEIMAGECOUNT > x-1: tags["WEBMEDIAFILENAME%d" % x] = "%s&seq=%d" % (a.WEBSITEMEDIANAME, x)
     # Add extra publishing text, preserving the line endings
     notes = utils.nulltostr(a.WEBSITEMEDIANOTES)
     notes += configuration.third_party_publisher_sig(dbo)
@@ -149,15 +145,22 @@ def get_animal_view_adoptable_html(dbo):
     """
     head, body, foot = template.get_html_template(dbo, "animalviewadoptable")
     if head == "":
-        head = "<!DOCTYPE html>\n<html>\n<head>\n<title>Adoptable Animals</title></head>\n<body>"
-        body = "<div id=\"asm3-adoptables\" />\n" \
+        head = "<!DOCTYPE html>\n<html>\n<head>\n<title>Adoptable Animals</title>\n" \
+            "<style>\n" \
+            ".asm3-adoptable-item { max-width: 200px; font-family: sans-serif; }\n" \
+            ".asm3-adoptable-link { font-weight: bold; }\n" \
+            ".asm3-adoptable-tag-agegroup, .asm3-adoptable-tag-size { display: none; }\n" \
+            "</style>\n" \
+            "</head>\n<body>\n"
+        body = "<div id=\"asm3-adoptables\"></div>\n" \
             "<script>\n" \
             "asm3_adoptable_filters = \"sex breed agegroup size species\";\n" \
             "asm3_adoptable_iframe = true;\n" \
             "asm3_adoptable_iframe_fixed = false; // fixed == true does not work with multi-photos/scrolling\n" \
             "</script>\n" \
-            "<script src=\"%s?method=animal_view_adoptable_js&account=%s\"></script>" % (SERVICE_URL, dbo.database)
+            "<script src=\"$$ADOPTABLEJSURL$$\"></script>"
         foot = "</body>\n</html>"
+    body = body.replace("$$ADOPTABLEJSURL$$", "%s?method=animal_view_adoptable_js&account=%s" % (SERVICE_URL, dbo.database))
     return "%s\n%s\n%s" % (head, body, foot)
 
 def get_animal_view_adoptable_js(dbo):

@@ -324,7 +324,7 @@ def get_traploan_two_dates(dbo, start, end):
     return dbo.query(get_traploan_query(dbo) + \
         "WHERE ReturnDate Is Null AND ReturnDueDate >= ? AND ReturnDueDate <= ?", (start, end))
 
-def update_dispatch_geocode(dbo, incidentid, latlon="", address="", town="", county="", postcode=""):
+def update_dispatch_geocode(dbo, incidentid, latlon="", address="", town="", county="", postcode="", country=""):
     """
     Looks up the geocode for this incident with the address info given.
     If latlon is already set to a value, checks the address hash to see if it
@@ -337,10 +337,16 @@ def update_dispatch_geocode(dbo, incidentid, latlon="", address="", town="", cou
         town = row.DISPATCHTOWN
         county = row.DISPATCHCOUNTY
         postcode = row.DISPATCHPOSTCODE
+    # If we're allowing manual entry of latlon values and we have a non-empty
+    # value, do nothing so that changes to address don't overwrite it
+    # If someone has deleted the values, a latlon of ,,HASH is returned so
+    # we allow the geocode to be regenerated in that case.
+    if configuration.show_lat_long(dbo) and latlon is not None and latlon != "" and not latlon.startswith(",,"):
+        return latlon
     # If a latlon has been passed and it contains a hash of the address elements,
     # then the address hasn't changed since the last geocode was done - do nothing
     if latlon is not None and latlon != "":
-        if latlon.find(geo.address_hash(address, town, county, postcode)) != -1:
+        if latlon.find(geo.address_hash(address, town, county, postcode, country)) != -1:
             return latlon
     # Do the geocode
     latlon = geo.get_lat_long(dbo, address, town, county, postcode)
@@ -470,14 +476,14 @@ def update_animalcontrol_addlink(dbo, username, acid, animalid):
     if 0 != dbo.query_int("SELECT COUNT(*) FROM animalcontrolanimal WHERE AnimalControlID = ? AND AnimalID = ?", (acid, animalid)):
         raise utils.ASMValidationError(_("That animal is already linked to the incident", l))
     dbo.execute("INSERT INTO animalcontrolanimal (AnimalControlID, AnimalID) VALUES (?, ?)", (acid, animalid))
-    audit.create(dbo, username, "animalcontrolanimal", acid, "incident %d linked to animal %d" % (acid, animalid))
+    audit.create(dbo, username, "animalcontrolanimal", acid, "", "incident %d linked to animal %d" % (acid, animalid))
 
 def update_animalcontrol_removelink(dbo, username, acid, animalid):
     """
     Removes a link between an animal and an incident.
     """
     dbo.execute("DELETE FROM animalcontrolanimal WHERE AnimalControlID = ? AND AnimalID = ?", (acid, animalid))
-    audit.delete(dbo, username, "animalcontrolanimal", acid, "incident %d no longer linked to animal %d" % (acid, animalid))
+    audit.delete(dbo, username, "animalcontrolanimal", acid, "", "incident %d no longer linked to animal %d" % (acid, animalid))
 
 def insert_animalcontrol_from_form(dbo, post, username, geocode=True):
     """
@@ -524,7 +530,7 @@ def insert_animalcontrol_from_form(dbo, post, username, geocode=True):
         "AgeGroup":             post["agegroup"]
     }, username)
 
-    additional.save_values_for_link(dbo, post, nid, "incident")
+    additional.save_values_for_link(dbo, post, nid, "incident", True)
     update_animalcontrol_roles(dbo, nid, post.integer_list("viewroles"), post.integer_list("editroles"))
 
     # Look up a geocode for the dispatch address

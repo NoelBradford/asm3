@@ -128,7 +128,7 @@ $(function() {
             var fieldname = f.ID,
                 fieldid = "add_" + fieldname,
                 fieldattr = 'id="' + fieldid + '" ',
-                fieldval = f.VALUE || f.DEFAULTVALUE,
+                fieldval = f.VALUE,
                 postattr = "a." + f.MANDATORY + "." + fieldname,
                 fh = [];
             if (classes === undefined) { classes = "additional"; }
@@ -161,7 +161,7 @@ $(function() {
             else if (f.FIELDTYPE == additional.NOTES) {
                 fh.push('<td class="to' + f.LINKTYPE + '"><label for="' + fieldid + '">' + f.FIELDLABEL + '</label></td><td>');
                 fh.push('<textarea ' + fieldattr + ' data-post="' + postattr + '" class="asm-textareafixed ' + classes + '" ');
-                fh.push('title="' + html.title(f.TOOLTIP) + '">' + fieldval + '</textarea>');
+                fh.push('title="' + html.title(f.TOOLTIP) + '">' + common.nulltostr(fieldval) + '</textarea>');
             }
             else if (f.FIELDTYPE == additional.NUMBER) {
                 fh.push('<td class="to' + f.LINKTYPE + '"><label for="' + fieldid + '">' + f.FIELDLABEL + '</label></td><td>');

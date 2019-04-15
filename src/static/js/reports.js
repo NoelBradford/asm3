@@ -88,7 +88,7 @@ $(function() {
                     { json_field: "CATEGORY", post_field: "category", classes: "asm-doubletextbox", label: _("Category"), type: "text", validation: "notblank" },
                     { json_field: "TITLE", post_field: "title", classes: "asm-doubletextbox", label: _("Report Title"), type: "text", validation: "notblank" },
                     { json_field: "DESCRIPTION", post_field: "description", classes: "asm-doubletextbox", label: _("Description"), type: "text" },
-                    { json_field: "DAILYEMAIL", post_field: "dailyemail", classes: "asm-doubletextbox", label: _("Email To"), type: "text",
+                    { json_field: "DAILYEMAIL", post_field: "dailyemail", classes: "asm-doubletextbox", label: _("Email To"), type: "text", validation: "validemail", 
                         tooltip: _("An optional comma separated list of email addresses to send the output of this report to")},
                     { json_field: "DAILYEMAILFREQUENCY", post_field: "dailyemailfrequency", label: _("When"), type: "select", options: html.list_to_options(emailfreq, "ID", "DISPLAY") },
                     { json_field: "DAILYEMAILHOUR", post_field: "dailyemailhour", label: _("at"), type: "select",
@@ -114,6 +114,7 @@ $(function() {
                         onchange: function() {
                             if (!reports.validation()) { tableform.dialog_enable_buttons(); return; }
                             tableform.fields_update_row(dialog.fields, row);
+                            reports.set_extra_fields(row);
                             tableform.fields_post(dialog.fields, "mode=update&reportid=" + row.ID, "reports", function(response) {
                                 tableform.table_update(table);
                                 tableform.dialog_close();
@@ -145,7 +146,7 @@ $(function() {
                     }},
                     { field: "CATEGORY", display: _("Category") },
                     { field: "VIEWROLES", display: _("Roles"), formatter: function(row) {
-                        return row.VIEWROLES ? row.VIEWROLES.replace("|", ", ") : "";
+                        return common.nulltostr(row.VIEWROLES).replace(/[|]+/g, ", ");
                     }},
                     { field: "TITLE", display: _("Report Title"), initialsort: true },
                     { field: "DESCRIPTION", display: _("Description") }
@@ -163,8 +164,8 @@ $(function() {
                                      .then(function(response) {
                                          var row = {};
                                          row.ID = response;
-                                         row.VIEWROLES = "";
                                          tableform.fields_update_row(dialog.fields, row);
+                                         reports.set_extra_fields(row);
                                          controller.rows.push(row);
                                          tableform.table_update(table);
                                          tableform.dialog_close();
@@ -455,14 +456,20 @@ $(function() {
             if (type != "REPORT") {
                 $("#html").closest("tr").hide();
                 $("#dailyemail").closest("tr").hide();
+                $("#dailyemailfrequency").closest("tr").hide();
                 $("#dailyemailhour").closest("tr").hide();
+                $("#omitheaderfooter").closest("tr").hide();
+                $("#omitcriteria").closest("tr").hide();
                 $("#button-genhtml").hide();
                 $("#dialog-add").dialog("option", "height", "auto");
             }
             else {
                 $("#html").closest("tr").show();
                 $("#dailyemail").closest("tr").show();
+                $("#dailyemailfrequency").closest("tr").show();
                 $("#dailyemailhour").closest("tr").show();
+                $("#omitheaderfooter").closest("tr").show();
+                $("#omitcriteria").closest("tr").show();
                 $("#button-genhtml").show();
                 $("#dialog-add").dialog("option", "height", "auto");
             }
@@ -500,6 +507,17 @@ $(function() {
                 .always(function() {
                     header.hide_loading();
                 });
+        },
+
+        set_extra_fields: function(row) {
+            // Build list of VIEWROLES from VIEWROLEIDS
+            var roles = [];
+            var roleids = row.VIEWROLEIDS;
+            if ($.isArray(roleids)) { roleids = roleids.join(","); }
+            $.each(roleids.split(/[|,]+/), function(i, v) {
+                roles.push(common.get_field(controller.roles, v, "ROLENAME"));
+            });
+            row.VIEWROLES = roles.join("|");
         },
 
         validation: function() {

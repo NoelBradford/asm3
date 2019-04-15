@@ -22,6 +22,9 @@ cp -rf ../../src/* sheltermanager3/usr/lib/sheltermanager3/
 # Add docs
 cp ../../README.md sheltermanager3/usr/share/doc/sheltermanager3
 
+# Add the example config
+cp ../../scripts/asm3.conf.example sheltermanager3/etc/asm3.conf
+
 # Add logging
 echo "local3.*                          -/var/log/asm3.log" > sheltermanager3/etc/rsyslog.d/asm3.conf
 
@@ -113,7 +116,7 @@ Priority: optional
 Architecture: all
 Essential: no
 Depends: debconf, python-webpy, python-pil, python-memcache, python-requests, python-mysqldb, python-psycopg2
-Suggests: mysql-server, imagemagick, wkhtmltopdf, python-sqlite3
+Suggests: mysql-server, imagemagick, wkhtmltopdf, python-sqlite
 Installed-Size: `du -s -k sheltermanager3 | awk '{print$1}'`
 Maintainer: ASM Team [info@sheltermanager.com]
 Provides: sheltermanager3

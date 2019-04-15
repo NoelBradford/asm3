@@ -132,6 +132,10 @@ $(function() {
                 '<input type="text" id="dispatchpostcode" data-json="DISPATCHPOSTCODE" data-post="dispatchpostcode" class="asm-textbox" />',
                 '</td>',
                 '</tr>',
+                '<tr id="dispatchlatlongrow">',
+                '<td><label for="dispatchlatlong">' + _("Latitude/Longitude") + '</label></td>',
+                '<td><input type="text" class="asm-latlong" id="dispatchlatlong" data-json="DISPATCHLATLONG" data-post="dispatchlatlong" /></td>',
+                '</tr>',
                 '<tr>',
                 '<td><label for="pickuplocation">' + _("Pickup Location") + '</label></td>',
                 '<td><select id="pickuplocation" data-json="PICKUPLOCATIONID" data-post="pickuplocation" class="asm-selectbox">',
@@ -200,7 +204,6 @@ $(function() {
                 '<!-- Third column, embedded map placeholder -->',
                 '</td>',
                 '<td width="35%">',
-                '<input type="hidden" id="latlong" data-json="DISPATCHLATLONG" data-post="dispatchlatlong" />',
                 '<div id="embeddedmap" style="z-index: 1; width: 100%; height: 300px; color: #000" />',
                 '<!-- end outer table -->',
                 '</td>',
@@ -358,6 +361,8 @@ $(function() {
 
             // Hide the site chooser if multi-site is off
             $("#siterow").toggle( config.bool("MultiSiteEnabled") );
+            
+            $("#dispatchlatlongrow").toggle( config.bool("ShowLatLong") );
 
             // Hide the view roles controls if incident permissions are off
             if (!config.bool("IncidentPermissions")) {
@@ -575,6 +580,9 @@ $(function() {
 
             // Load the data into the controls for the screen
             $("#asm-content input, #asm-content select, #asm-content textarea").fromJSON(controller.incident);
+
+            // Update the lat/long
+            $(".asm-latlong").latlong("load");
 
             // Remove any retired lookups from the lists
             $(".asm-selectbox").select("removeRetiredOptions");

@@ -64,8 +64,8 @@ ShortShelterCode
     The shortened version of the shelter code 
 Age
     The animal's age in readable form (eg: “5 years and 6 months”) 
-AnimalComments
-    The animal comment box 
+Description / AnimalComments
+    The animal description box 
 HealthProblems
     The health problems field 
 LitterID / AcceptanceNumber
@@ -96,8 +96,6 @@ CoatType
     The animal's coat type 
 AnimalFlags
     A list of the flags assigned to an animal, separated by commas.
-AnimalComments
-    The animal comments box 
 AnimalCreatedBy
     The user who created the animal record (AnimalCreatedByName for full user
     name) 
@@ -179,8 +177,8 @@ HeartwormTestDate
     The date of the test 
 HeartwormTestResult
     The result - positive or negative 
-HiddenAnimalDetails
-    The hidden details box 
+HiddenComments / HiddenAnimalDetails
+    The hidden comments box 
 AnimalLastChangedBy
     The user who last changed the animal record (AnimalLastChangedByName for full user name) 
 AnimalLastChangedDate
@@ -227,6 +225,8 @@ BroughtInByMobilePhone
     (BroughtInByCellPhone for US users)
 BroughtInByEmail
     The email address of the person who brought the animal in
+BroughtInBy Additional Fields
+    Additional fields on the brought in by person can be accessed via BroughtInByFIELDNAME
 OriginalOwnerAddress
     The address of the animal's original owner 
 OriginalOwnerName
@@ -245,6 +245,8 @@ OriginalOwnerMobilePhone
     The original owner's mobile phone number 
 OriginalOwnerEmail
     The original owner's email address 
+OriginalOwner Additional Fields
+    Additional fields on the original owner can be accessed via OriginalOwnerFIELDNAME
 CurrentOwnerName
     The name of the animal's current owner (fosterer or adopter)
 CurrentOwnerAddress 
@@ -263,6 +265,8 @@ CurrentOwnerMobilePhone
     Current owner's cell/mobile phone number
 CurrentOwnerEmail 
     Current owner's email address
+CurrentOwner Additional Fields
+    Additional fields on the current owner can be accessed via CurrentOwnerFIELDNAME
 ReservedOwnerName
     The name of the person with an active reserve on the animal
 ReservedOwnerAddress 
@@ -359,11 +363,13 @@ SpeciesName
     The animal's species 
 ReclaimedDate
     The date (if applicable) that the animal was reclaimed by its owner 
-MostRecentEntry
+MostRecentEntry / MostRecentEntryDate
     The date the animal most recently entered the shelter (if it was returned
     from an adoption or fostering for example) 
 MostRecentMonthEntry
     The month the animal most recently entered the shelter 
+MostRecentEntryCategory
+    The entry category or return category depending on which happened most recently
 TimeOnShelter
     A readable string showing the time the animal has spent on the shelter
     (from the last time it entered), eg: 4 weeks. 
@@ -466,6 +472,13 @@ select the most recent vaccination of that type that has a non-blank given
 date. Eg: VaccinationCommentsRecentDHCPP will return the comments of the last
 given DHCPP vaccination.
 
+The "Due" keyword operates with the vaccination type and allows you to
+select the most recent vaccination of that type that has a blank given given 
+date. Eg: VaccinationRequiredDueDHCPP will return the date the most recent
+due DHCPP vaccination. Note that the "Due" keyword will not work if you have 
+turned off the option to include incomplete medical items from documents under
+:menuselection:`Settings --> Options --> Documents --> Include incomplete medical records when generating document templates`
+
 Test Keys
 ----------
 
@@ -507,7 +520,7 @@ Medical Keys
 The same rules for vaccinations apply to reading medical records, except the
 MedicalName field can be used for looking up the most recent record of that
 treatment. In addition, the Recent keyword looks for medical regimens that have
-a status of complete.
+a status of complete, while the Due keyword looks for active medical regimens.
 
 MedicalName
     The name of the medical treatment 
@@ -540,7 +553,8 @@ Payment Keys
 
 If you are creating a document from the animal or person records, then the same
 rules apply as for vaccinations and medical records when accessing payments.
-payments. The Recent keyword looks for payments that have been received. 
+payments. The Recent keyword looks for payments that have been received and Due 
+for non-received payments.
 
 However, if you create an invoice/receipt document from the payment tab of a
 person or animal record (or the payment book), you can select multiple payments
@@ -605,7 +619,8 @@ Transport Keys
 
 If you are creating a document from the animal or person records, then the same
 rules apply as for vaccinations and medical records when accessing transports.
-The Recent keyword looks for transports with the most recent drop off date/time.
+The Recent keyword looks for transports with the most recent drop off date/time
+and the Due keyword uses the pickup date/time.
 
 However, if you create a document from the transport tab of an
 animal record (or the transport book), you can select multiple transports
@@ -632,6 +647,8 @@ TransportState / TransportCounty
    The pickup state / county
 TransportPickupZipcode / TransportPickupPostcode
    The pickup zipcode/postcode
+TransportPickupCountry
+   The pickup country
 TransportPickupEmail
    The email address of the pickup contact
 TransportPickupHomePhone
@@ -652,6 +669,8 @@ TransportDropoffState / TransportDropoffCounty
    The dropoff state / county
 TransportDropoffZipcode / TransportDropoffPostcode
    The dropoff zipcode / postcode
+TransportDropoffCountry
+   The dropoff country
 TransportDropoffEmail
    The email address of the dropoff contact
 TransportDropoffHomePhone
@@ -849,6 +868,8 @@ OwnerCounty
     (OwnerState for US users) 
 OwnerPostcode 
     (OwnerZipcode for US users) 
+Jurisdiction
+    The person's jurisdiction
 WorkTelephone 
     The person's work telephone number
 MobileTelephone 
@@ -876,11 +897,13 @@ LastX for descending (eg: CitationNameLast1) and with the type name for the
 most recent citation of that type for the person (eg: FineAmountFirstOffence).
 Citation keys can be accessed from a person document or an incident document.
 
+The Recent keyword returns citations where the fine is paid where Due returns unpaid.
+
 CitationName
     The type of citation being issued
 CitationDate
     The date of the citation
-Comments
+CitationComments
     Any comments on the citation
 FineAmount
     The fine amount
@@ -895,7 +918,11 @@ Traploan Keys
 The same rules apply as for vaccinations, but for accessing trap loans. Each
 loan is indexed with a number for ascending (eg: TrapTypeName1), LastX for
 descending (eg: TrapTypeNameLast1) and with the type name for the most recent
-loan of that type for the person (eg: TrapLoanDateCat). The fields are:
+loan of that type for the person (eg: TrapLoanDateCat). 
+
+The Recent keyword returns returned trap loan records where Due is unreturned.
+
+The fields are:
 
 TrapTypeName
     The type of trap being loaned
@@ -1180,7 +1207,7 @@ CanAffordDonation
     Yes/No - whether the person can afford to make a donation
 Urgency
     An urgency rating for this waiting list item
-Comments
+WaitingListComments
     Any comments on this waiting list entry
 DocumentImgLink
     A photo of the animal if one exists. 200/300/400/500 can also be suffixed
@@ -1217,7 +1244,7 @@ CompletedTime
     The time the appointment was complete
 ReasonForAppointment
     The reason the appointment was made
-Comments
+AppointmentComments
     Any comments on the appointment
 InvoiceAmount
     The total of all invoice items for the appointment

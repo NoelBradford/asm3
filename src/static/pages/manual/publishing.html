@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Publishing &mdash; ASM 41u documentation</title>
+  <title>Publishing &mdash; ASM 42u documentation</title>
   
 
   
@@ -17,34 +17,36 @@
   
 
   
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Mail Merge Sources" href="mailmerge.html" />
     <link rel="prev" title="Service API" href="service.html" /> 
-
-  
-  <script src="_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -58,7 +60,7 @@
             
             
               <div class="version">
-                41u
+                42u
               </div>
             
           
@@ -469,15 +471,19 @@ options for filtering animals are the same (see previous section for
 reference).</p>
 <p>Options are available to override the desex flag to send all your animals and mark
 whether you will fly animals between states for adoption.</p>
-<p>PetRescue have a “best feature” tagline that they show at the top of listings.
-By default, this value is set to “Looking for love” on all listings. You are
-allowed 25 letters and can override the tagline on a per-animal basis. To do
-this, you need to create an additional field with the name “bestfeature” for
-your animal records and set the tagline value.</p>
-<p>Similarly PetRescue have a “needs constant care” attribute that can be used to
-indicate that an adoptable cannot be left by itself. This can be set with an
-additional field called “needsconstantcare” of type “Yes/No” to allow you to
-set it for your animals.</p>
+<p>PetRescue have a number of extra fields that you can set by creating additional
+animal fields with certain names in your database. The system responds to the
+field names, you can label them anything you want, they must have one of the
+links to animal records.</p>
+<ul class="simple">
+<li>bestfeature (Text): PetRescue show a tagline at the top of listings.  By default,
+this value is set to “Looking for love” on all listings. You are allowed 25
+letters and can override the tagline on a per-animal basis.</li>
+<li>needsconstantcare (Yes/No): This can be used to indicate that an adoptable
+cannot be left by itself.</li>
+<li>breederid (Text): Dogs located in QLD with a date of birth after 26th May
+2017 require a breeder number.</li>
+</ul>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">PetRescue integration relies on you naming your breeds and species with the same values that they do. If a breed does not match one of the PetRescue breeds, ASM will send it as “Mixed Breed” instead.</p>
@@ -611,7 +617,7 @@ adopted to a new owner.</p>
         <a href="mailmerge.html" class="btn btn-neutral float-right" title="Mail Merge Sources" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="service.html" class="btn btn-neutral" title="Service API" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="service.html" class="btn btn-neutral float-left" title="Service API" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -620,7 +626,7 @@ adopted to a new owner.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, Sheltermanager, Ltd
+        &copy; Copyright 2019, Sheltermanager, Ltd
 
     </p>
   </div>
@@ -637,35 +643,16 @@ adopted to a new owner.</p>
   
 
 
-  
-
-    
-    
-      <script type="text/javascript">
-          var DOCUMENTATION_OPTIONS = {
-              URL_ROOT:'./',
-              VERSION:'41u',
-              LANGUAGE:'None',
-              COLLAPSE_INDEX:false,
-              FILE_SUFFIX:'.html',
-              HAS_SOURCE:  true,
-              SOURCELINK_SUFFIX: '.txt'
-          };
-      </script>
-        <script type="text/javascript" src="_static/jquery.js"></script>
-        <script type="text/javascript" src="_static/underscore.js"></script>
-        <script type="text/javascript" src="_static/doctools.js"></script>
-    
-
-  
-
-  <script type="text/javascript" src="_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

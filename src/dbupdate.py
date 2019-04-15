@@ -24,7 +24,7 @@ VERSIONS = (
     34002, 34003, 34004, 34005, 34006, 34007, 34008, 34009, 34010, 34011, 34012,
     34013, 34014, 34015, 34016, 34017, 34018, 34019, 34020, 34021, 34022, 34100,
     34101, 34102, 34103, 34104, 34105, 34106, 34107, 34108, 34109, 34110, 34111,
-    34112
+    34112, 34200, 34201, 34202
 )
 
 LATEST_VERSION = VERSIONS[-1]
@@ -223,8 +223,11 @@ def sql_structure(dbo):
         flongstr("Markings"),
         fstr("ShelterCode"),
         fstr("ShortCode"),
-        fint("UniqueCodeID"),
-        fint("YearCodeID"),
+        # ASM2_COMPATIBILITY
+        fint("UniqueCodeID", True),
+        fdate("SmartTagSentDate", True),
+        fint("YearCodeID", True),
+        # ASM2_COMPATIBILITY
         fstr("AcceptanceNumber"),
         fdate("DateOfBirth"),
         fint("EstimatedDOB"),
@@ -243,8 +246,6 @@ def sql_structure(dbo):
         fint("SmartTag"),
         fstr("SmartTagNumber", True),
         fdate("SmartTagDate", True),
-        # ASM2_COMPATIBILITY
-        fdate("SmartTagSentDate", True),
         fint("SmartTagType"),
         fint("Neutered"),
         fdate("NeuteredDate", True),
@@ -654,6 +655,7 @@ def sql_structure(dbo):
 
     sql += table("animaltransport", (
         fid(),
+        fstr("TransportReference", True),
         fint("AnimalID"),
         fint("TransportTypeID"),
         fint("DriverOwnerID"),
@@ -662,18 +664,21 @@ def sql_structure(dbo):
         fstr("PickupTown", True),
         fstr("PickupCounty", True),
         fstr("PickupPostcode", True),
+        fstr("PickupCountry", True),
         fdate("PickupDateTime"),
         fint("DropoffOwnerID"),
         fstr("DropoffAddress", True),
         fstr("DropoffTown", True),
         fstr("DropoffCounty", True),
         fstr("DropoffPostcode", True),
+        fstr("DropoffCountry", True),
         fdate("DropoffDateTime"),
         fint("Status"),
         fint("Miles", True),
         fint("Cost"),
         fdate("CostPaidDate", True),
         flongstr("Comments") ))
+    sql += index("animaltransport_TransportReference", "animaltransport", "TransportReference")
     sql += index("animaltransport_AnimalID", "animaltransport", "AnimalID")
     sql += index("animaltransport_DriverOwnerID", "animaltransport", "DriverOwnerID")
     sql += index("animaltransport_PickupOwnerID", "animaltransport", "PickupOwnerID")
@@ -743,12 +748,14 @@ def sql_structure(dbo):
         fstr("UserName"),
         fstr("TableName"),
         fint("LinkID", True),
+        fstr("ParentLinks", True),
         flongstr("Description", False) ), False)
     sql += index("audittrail_Action", "audittrail", "Action")
     sql += index("audittrail_AuditDate", "audittrail", "AuditDate")
     sql += index("audittrail_UserName", "audittrail", "UserName")
     sql += index("audittrail_TableName", "audittrail", "TableName")
     sql += index("audittrail_LinkID", "audittrail", "LinkID")
+    sql += index("audittrail_ParentLinks", "audittrail", "ParentLinks")
 
     sql += table("basecolour", (
         fid(),
@@ -1136,6 +1143,7 @@ def sql_structure(dbo):
         fstr("OwnerTown", True),
         fstr("OwnerCounty", True),
         fstr("OwnerPostcode", True),
+        fstr("OwnerCountry", True),
         fstr("LatLong", True),
         fstr("HomeTelephone", True),
         fstr("WorkTelephone", True),
@@ -1201,6 +1209,7 @@ def sql_structure(dbo):
     sql += index("owner_JurisdictionID", "owner", "JurisdictionID")
     sql += index("owner_OwnerInitials", "owner", "OwnerInitials")
     sql += index("owner_OwnerPostcode", "owner", "OwnerPostcode")
+    sql += index("owner_OwnerCountry", "owner", "OwnerCountry")
     sql += index("owner_OwnerSurname", "owner", "OwnerSurname")
     sql += index("owner_OwnerTitle", "owner", "OwnerTitle")
     sql += index("owner_OwnerTown", "owner", "OwnerTown")
@@ -2446,6 +2455,7 @@ def install_default_templates(dbo, removeFirst = False):
         dbo.execute_dbupdate("DELETE FROM templatehtml")
     al.info("creating default templates", "dbupdate.install_default_templates", dbo)
     add_html_template_from_files("animalview")
+    add_html_template_from_files("animalviewadoptable")
     add_html_template_from_files("littlebox")
     add_html_template_from_files("responsive")
     add_html_template_from_files("plain")
@@ -2470,6 +2480,7 @@ def install_default_templates(dbo, removeFirst = False):
     add_document_template_from_file("receipt_tax.html", "/templates", path + "media/templates/receipt_tax.html")
     add_document_template_from_file("reclaim_release.html", "/templates", path + "media/templates/reclaim_release.html")
     add_document_template_from_file("reserved.html", "/templates", path + "media/templates/reserved.html")
+    add_document_template_from_file("spay_neuter_voucher.html", "/templates", path + "media/templates/spay_neuter_voucher.html")
     add_document_template_from_file("rspca_adoption.html", "/templates/rspca", path + "media/templates/rspca/rspca_adoption.html")
     add_document_template_from_file("rspca_behaviour_observations_cat.html", "/templates/rspca", path + "media/templates/rspca/rspca_behaviour_observations_cat.html")
     add_document_template_from_file("rspca_behaviour_observations_dog.html", "/templates/rspca", path + "media/templates/rspca/rspca_behaviour_observations_dog.html")
@@ -2784,6 +2795,8 @@ def remove_asm2_compatibility(dbo):
     # ASM2_COMPATIBILITY
     dbo.execute_dbupdate("ALTER TABLE users DROP COLUMN SecurityMap")
     dbo.execute_dbupdate("ALTER TABLE animal DROP COLUMN SmartTagSentDate")
+    dbo.execute_dbupdate("ALTER TABLE animal DROP COLUMN YearCodeID")
+    dbo.execute_dbupdate("ALTER TABLE animal DROP COLUMN UniqueCodeID")
     dbo.execute_dbupdate("ALTER TABLE media DROP COLUMN LastPublished")
     dbo.execute_dbupdate("ALTER TABLE media DROP COLUMN LastPublishedPF")
     dbo.execute_dbupdate("ALTER TABLE media DROP COLUMN LastPublishedAP")
@@ -2815,6 +2828,7 @@ def update_3000(dbo):
     dbfs.put_file(dbo, "receipt.html", "/templates", path + "media/templates/receipt.html")
     dbfs.put_file(dbo, "receipt_tax.html", "/templates", path + "media/templates/receipt_tax.html")
     dbfs.put_file(dbo, "reserved.html", "/templates", path + "media/templates/reserved.html")
+    dbfs.put_file(dbo, "spay_neuter_voucher.html", "/templates", path + "media/templates/spay_neuter_voucher.html")
     dbfs.create_path(dbo, "/templates", "rspca")
     dbfs.put_file(dbo, "rspca_adoption.html", "/templates/rspca", path + "media/templates/rspca/rspca_adoption.html")
     dbfs.put_file(dbo, "rspca_behaviour_observations_cat.html", "/templates/rspca", path + "media/templates/rspca/rspca_behaviour_observations_cat.html")
@@ -4989,4 +5003,24 @@ def update_34112(dbo):
     # Add a new time additional field type
     l = dbo.locale
     dbo.execute_dbupdate("INSERT INTO lksfieldtype (ID, FieldType) VALUES (10, ?)", [ _("Time", l) ])
+
+def update_34200(dbo):
+    # Add audittrail.ParentLinks
+    add_column(dbo, "audittrail", "ParentLinks", dbo.type_shorttext)
+    add_index(dbo, "audittrail_ParentLinks", "audittrail", "ParentLinks")
+
+def update_34201(dbo):
+    # Add owner.OwnerCountry, animaltransport.PickupCountry, animaltransport.DropoffCountry
+    add_column(dbo, "owner", "OwnerCountry", dbo.type_shorttext)
+    add_index(dbo, "owner_OwnerCountry", "owner", "OwnerCountry")
+    add_column(dbo, "animaltransport", "PickupCountry", dbo.type_shorttext)
+    add_column(dbo, "animaltransport", "DropoffCountry", dbo.type_shorttext)
+    dbo.execute_dbupdate("UPDATE owner SET OwnerCountry=''")
+    dbo.execute_dbupdate("UPDATE animaltransport SET PickupCountry='', DropoffCountry=''")
+
+def update_34202(dbo):
+    # Add animaltransport.TransportReference
+    add_column(dbo, "animaltransport", "TransportReference", dbo.type_shorttext)
+    add_index(dbo, "animaltransport_TransportReference", "animaltransport", "TransportReference")
+    dbo.execute_dbupdate("UPDATE animaltransport SET TransportReference=''")
 

@@ -162,9 +162,13 @@ $(function() {
                 '<input type="text" id="postcode" data-json="OWNERPOSTCODE" data-post="postcode" class="asm-textbox" />',
                 '</td>',
                 '</tr>',
+                '<tr id="countryrow">',
+                '<td><label for="country">' + _("Country") + '</label></td>',
+                '<td><input class="asm-textbox newform" id="country" data-json="OWNERCOUNTRY" data-post="country" type="textbox" /></td>',
+                '</tr>',
                 '<tr id="latlongrow">',
-                '<td></td>',
-                '<td><input type="text" class="asm-textbox" id="latlong" data-json="LATLONG" data-post="latlong" /></td>',
+                '<td><label for="latlong">' + _("Latitude/Longitude") + '</label></td>',
+                '<td><input type="text" class="asm-latlong" id="latlong" data-json="LATLONG" data-post="latlong" /></td>',
                 '</tr>',
                 '<!-- end right table -->',
                 '</table>',
@@ -498,6 +502,7 @@ $(function() {
 
             // CONFIG ===========================
             $(".towncounty").toggle( !config.bool("HideTownCounty") );
+            $("#countryrow").toggle( !config.bool("HideCountry") );
             $("#latlongrow").toggle( config.bool("ShowLatLong") );
             $("#siterow").toggle( config.bool("MultiSiteEnabled") );
             $("#jurisdictionrow").toggle( !config.bool("DisableAnimalControl") );
@@ -527,6 +532,13 @@ $(function() {
                 $("#asm-details-accordion").accordion("option", "active", 0);
                 validate.highlight("surname");
                 return false;
+            }
+
+            // email
+            if ($.trim($("#email").val()) != "") {
+                if (!validate.email($("#email").val())) {
+                    return false;
+                }
             }
 
             // any additional fields that are marked mandatory
@@ -796,6 +808,9 @@ $(function() {
 
             // Remove any retired lookups from the lists
             $(".asm-selectbox").select("removeRetiredOptions");
+
+            // Update the lat/long
+            $(".asm-latlong").latlong("load");
 
             // Load person flags
             html.person_flag_options(controller.person, controller.flags, $("#flags"));

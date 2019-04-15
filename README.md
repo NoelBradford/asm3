@@ -12,7 +12,7 @@ will install all the software you need to run ASM. If you are using the
 sheltermanager3 deb package it already has dependencies set for these
 and will install them for you.
 
-* apt-get install make python python-pil python-webpy python-mysqldb python-psycopg2
+* apt-get install make python python-webpy python-pil python-mysqldb python-psycopg2
 
 Extra, non-mandatory packages:
 
@@ -33,32 +33,51 @@ Logging
 -------
 
 ASM logs to the Unix syslog USER facility (/var/log/user.log for most installs)
-by default. This can be changed in the sitedefs.
+by default. This can be changed in the configuration.
 
 Configuring a database
 ----------------------
 
-Find the sitedefs.py file in the source. If you used the Debian package,
-it will be located in /usr/lib/sheltermanager3
+If you used the debian package, edit the file /etc/asm3.conf
+
+If you did not, copy scripts/asm3.conf.example to /etc/asm3.conf and edit it.
 
 Set the following values:
 
-ASM3_DBTYPE (POSTGRESQL, MYSQL or SQLITE)
-ASM3_DBHOST
-ASM3_DBPORT
-ASM3_DBUSERNAME
-ASM3_DBPASSWORD
-ASM3_DBNAME (can be sqlite3 file if type is SQLITE)
+asm3_dbtype = (POSTGRESQL, MYSQL or SQLITE)
 
-If you are using MySQL, make sure you have issued a CREATE DATABASE
+asm3_dbhost = (hostname of your server)
+
+asm3_dbport = (port of your server if using tcp)
+
+asm3_dbusername = 
+
+asm3_dbpassword = 
+
+asm3_dbname = (name of the database, can be file path if type is SQLITE)
+
+If you are using MySQL or POSTGRESQL, make sure you have issued a CREATE DATABASE
 and the database already exists (however the schema can be empty).
+
+ASM will look for it's config file in this order until it finds one:
+
+1. In an environment variable called ASM3_CONF
+2. In $INSTALL_DIR/asm3.conf (the folder asm3 python modules are installed in)
+3. In $HOME/.asm3.conf (the home directory of the user running asm3)
+4. In /etc/asm3.conf
 
 Starting the service
 --------------------
 
-The Debian package creates an init.d script called sheltermanager3,
-which is automatically added to the correct runlevels
-after package installation.
+The Debian package creates an init.d script called sheltermanager3 and
+a systemd unit called sheltermanager3. Both are automatically added to the correct 
+runlevels after package installation.
+
+After configuration, run:
+
+    service sheltermanager3 restart
+
+To reload the service with your new configuration.
 
 For manual setups, run "python code.py 5000" to start the service. An
 HTTP server will start running on port 5000, listening on all 
@@ -105,7 +124,7 @@ instructions assume Debian):
 1. Stop the sheltermanager3 service running and remove it from the
    existing system runlevels:
    
-   * /etc/init.d/sheltermanager3 stop
+   * service sheltermanager3 stop
    * update-rc.d sheltermanager3 remove
    
 2. Install apache2 with mod_wsgi. Make sure mod_wsgi is enabled.
@@ -124,17 +143,15 @@ WSGIPythonPath /usr/lib/python2.7:/usr/lib/python2.7/dist-packages:/usr/lib/shel
 Alias /asm/static /usr/lib/sheltermanager3/static
 AddType text/html .py
 <Directory /usr/lib/sheltermanager3>
-        Order deny,allow
-        Allow from all
+    Require all granted
 </Directory>
 ```
 
    This assumes that your ASM3 is located at /usr/lib/sheltermanager3
    (the default for our Debian package) and Python2.7
 
-
 4. Restart Apache and navigate to http://localhost/asm
 
-    * /etc/init.d/apache2 restart
+    * service apache2 restart
 
 

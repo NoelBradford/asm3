@@ -302,7 +302,7 @@ policies instigated as part of data protection compliance.
 
 .. warning:: Once deleted, documents are gone forever and cannot be recovered.
 
-*  Show GDPR Contact Opt-In field on person screens: If this option is on, the
+* Show GDPR Contact Opt-In field on person screens: If this option is on, the
   system will show a contact opt-in field on person records. You can use it to
   specify which forms of communication a person prefers. When saving the
   record, if "Email" is not in the list of preferred communication methods, the
@@ -381,8 +381,12 @@ Display
   the rows of the movement and medical books (foster book, reservation book,
   vaccination book, etc.)
 
-* Show a minimap of the address on person screens: Show an embedded map to the
-  person's address on the details screen.
+* Show a minimap of the address on person screens: Show an embedded map next to the
+  person's address on the details screen. Also shows a minimap on the dispatch
+  slider of incidents.
+
+* Allow editing of latitude/longitude with minimaps: Allow the latitude/longitude
+  geocodes to be hand edited in a field near the minimap and address.
 
 * Show weight as lb rather than kg: Change the field label on the animal weight
   field to lb instead of the usual kg.
@@ -463,13 +467,9 @@ documents from templates.
   will send them as attachments for you to download.
   
 * Include incomplete medical records when generating document templates: If
-  set, medical regimens will be included that are incomplete when accessing
-  them via LastX and Recent wordkeys. 
+  set, vaccinations, tests and medical regimens will be included that are incomplete 
+  when accessing them via LastX, Due and Recent wordkeys. 
   
-* Include incomplete vaccination and test records when generating document
-  templates: If set, vaccination and test records will be included that have
-  not been given when accessing them via LastX and Recent wordkeys.
-
 * When I generate a document, make a note of it in the log: If this option is
   on, a log record is created every time you generate a document.
 
@@ -550,8 +550,11 @@ Medical
 * Send a weekly email to fosterers with medical information about their
   animals: If set, an email will be sent to all active fosterers containing
   info of overdue medications and medications that fall due in the coming week.
-  The email is sent as part of the overnight batch if the day is the first of
-  the week (Monday).
+  The email is sent as part of the overnight batch, early on Monday mornings.
+
+  An example of the email fosterers will receive looks like this:
+
+.. image:: images/fosterer_email.png
 
 Movements
 ---------
@@ -598,6 +601,14 @@ the reservation for you after this time.
 * Treat Trial Adoptions as shelter inventory: As with the Foster as inventory
   option, trial adoptions are still shown in the Shelter View and on shelter
   searches/reports.
+
+* Our shelter does soft releases, allow us to mark these on movement screens:
+  When creating a released to wild movement, this allows for a soft release
+  to be made. A soft release is one where the animal is monitored for some
+  time after release.
+
+* Treat Soft Releases as shelter inventory: Animals on soft release will be 
+  kept in the shelter's inventory.
 
 * Warn when adopting an unaltered animal: If the animal has not been 
   neutered/spayed, show a warning when trying to adopt it. 
@@ -674,11 +685,15 @@ Remove
 * Remove the trap loan functionality from menus: Setting this option removes
   the trap loan link from the menu and the trap loan tab on the person screen.
 
-* Remove the town/county (city and state) fields from the owner screen: Setting
-  this option will prevent ASM from presenting the user with additional fields
-  to store the city and state information. These are handy for group owner
-  searches, but not all shelters want or need them and prefer to keep the
-  complete address in the address box. 
+* Remove the city/state fields from person details: Setting this option will
+  prevent ASM from presenting the user with additional fields to store the city
+  and state information. These are handy for group owner searches, but not all
+  shelters want or need them and prefer to keep the complete address in the
+  address box. 
+
+* Remove the country field from person details: Setting this option will 
+  hide the country field from person addresses. This option is on by default 
+  since most shelters only deal with one country.
 
 * Remove the insurance number field from the movement screens: Setting this
   option hides the insurance number field and button from :menuselection:`Move

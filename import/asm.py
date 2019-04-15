@@ -50,7 +50,7 @@ Also has some useful helper functions for reading CSVs and parsing values, eg:
 """
 
 import csv, datetime, re, time
-import os, sys, urllib2, base64
+import os, sys, urllib2, base64, requests
 from cStringIO import StringIO
 
 # Next year code to use for animals when generating shelter codes
@@ -91,12 +91,13 @@ def atoi(s):
     except:
         return 0
 
-def csv_to_list(fname, strip = False, remove_control = False, uppercasekeys = False, unicodehtml = False):
+def csv_to_list(fname, strip = False, remove_control = False, remove_non_ascii = False, uppercasekeys = False, unicodehtml = False):
     """
     Reads the csv file fname and returns it as a list of maps 
     with the first row used as the keys.
     strip: If True, removes whitespace from all fields
     remove_control: If True, removes all ascii chars < 32
+    remove_non_ascii: If True, removes all ascii chars < 32 or > 127
     uppercasekeys: If True, runs upper() on headings/map keys
     unicodehtml: If True, interprets the file as utf8 and replaces unicode chars with HTML entities
     returns a list of maps
@@ -111,6 +112,9 @@ def csv_to_list(fname, strip = False, remove_control = False, uppercasekeys = Fa
         for s in f.readlines():
             if remove_control:
                 b.write(''.join(c for c in s if ord(c) >= 32))
+                b.write("\n")
+            if remove_non_ascii:
+                b.write(''.join(c for c in s if ord(c) >= 32 and ord(c) <= 127))
                 b.write("\n")
             elif unicodehtml:
                 b.write(s.decode("utf8").encode("ascii", "xmlcharrefreplace"))
@@ -273,6 +277,10 @@ def getdate_ddmmyyyy(s):
 def getdate_ddmmmyy(s):
     s = remove_time(s)
     return parse_date(s, "%d-%b-%y")
+
+def getdate_jackcess(s):
+    """ Parses dates in the Jackcess format: Thu Apr 23 00:00:00 BST 2015 """
+    return parse_date(s, "%a %b %d %H:%M:%S %Z %Y")
 
 def getdate_iso(s):
     s = remove_time(s)
@@ -958,6 +966,10 @@ def incidenttype_from_db(name, default = 1):
     """ Looks up the type in the db when the conversion is run, assign to IncidentTypeID """
     return "COALESCE((SELECT ID FROM incidenttype WHERE lower(IncidentName) LIKE lower(%s) LIMIT 1), %d)" % (ds(name.strip()), default)
 
+def jurisdiction_from_db(name, default = 1):
+    """ Looks up the jurisdiction in the db when the conversion is run, assign to JurisdictionID """
+    return "COALESCE((SELECT ID FROM jurisdiction WHERE lower(JurisdictionName) LIKE lower('%s') LIMIT 1), %d)" % (name.strip(), default)
+
 def location_id_for_name(name, createIfNotExist = True):
     global locations
     if name.strip() == "": return 1
@@ -1009,6 +1021,13 @@ def entryreason_from_db(name, default = 2):
 def size_from_db(name, default = 1):
     """ Looks up the size in the db when the conversion is run, assign to animal.Size """
     return "COALESCE((SELECT ID FROM lksize WHERE lower(Size) LIKE lower('%s') LIMIT 1), %d)" % (name.strip(), default)
+
+def size_id_for_name(name):
+    name = name.lower()
+    if name.startswith("v") or name.startswith("x"): return 0
+    if name.startswith("l"): return 1
+    if name.startswith("s"): return 2
+    return 3
 
 def donationtype_id_for_name(name, createIfNotExist = True):
     global donationtypes
@@ -1304,7 +1323,6 @@ def adopt_to(a, ownerid, movementtype = 1, movementdate = None):
     a.ActiveMovementID = m.ID
     a.ActiveMovementDate = m.MovementDate
     a.ActiveMovementType = m.MovementType
-    print m
     return m
 
 def adopt_older_than(animals, movements, ownerid=100, days=365):
@@ -1399,6 +1417,16 @@ def load_image_from_file(filename):
     except:
         return None
 
+def load_image_from_url(imageurl):
+    try:
+        sys.stderr.write("GET %s\n" % imageurl)
+        jpgdata = urllib2.urlopen(imageurl).read()
+        sys.stderr.write("200 OK %s\n" % imageurl)
+    except Exception,err:
+        sys.stderr.write(str(err) + "\n")
+        return None
+    return jpgdata
+
 def petfinder_get_adoptable(shelterid):
     """
     Returns the page of adoptable animals for the PetFinder shelterid
@@ -1428,14 +1456,54 @@ def petfinder_image(page, animalid, animalname):
     petid = regex(chunk, r"\/petdetail\/(.+?)\"")
     sys.stderr.write("Got PetID: %s\n" % petid)
     imageurl = "http://photos.petfinder.com/photos/pets/%s/1/?bust=1425358987&width=632&no_scale_up=1" % petid
-    try:
-        sys.stderr.write("GET %s\n" % imageurl)
-        jpgdata = urllib2.urlopen(imageurl).read()
-        sys.stderr.write("Got image from %s\n" % imageurl)
-    except Exception,err:
-        sys.stderr.write(str(err) + "\n")
-        return
+    jpgdata = load_image_from_url(imageurl)
     animal_image(animalid, jpgdata)
+
+def get_url(url, headers = {}, cookies = {}, timeout = None):
+    """
+    Retrieves a URL
+    """
+    # requests timeout is seconds/float, but some may call this with integer ms instead so convert
+    if timeout is not None and timeout > 1000: timeout = timeout / 1000.0
+    r = requests.get(url, headers = headers, cookies=cookies, timeout=timeout)
+    return { "cookies": r.cookies, "headers": r.headers, "response": r.text, "status": r.status_code, "requestheaders": r.request.headers, "requestbody": r.request.body }
+
+def get_image_url(url, headers = {}, cookies = {}, timeout = None):
+    """
+    Retrives an image from a URL
+    """
+    # requests timeout is seconds/float, but some may call this with integer ms instead so convert
+    if timeout is not None and timeout > 1000: timeout = timeout / 1000.0
+    r = requests.get(url, headers = headers, cookies=cookies, timeout=timeout, stream=True)
+    s = StringIO()
+    for chunk in r:
+        s.write(chunk) # default from requests is 128 byte chunks
+    return { "cookies": r.cookies, "headers": r.headers, "response": s.getvalue(), "status": r.status_code, "requestheaders": r.request.headers, "requestbody": r.request.body }
+        
+def post_data(url, data, contenttype = "", httpmethod = "", headers = {}):
+    """ 
+    Posts data to a URL as the body
+    httpmethod: POST by default
+    """
+    try:
+        if contenttype != "": headers["Content-Type"] = contenttype
+        req = urllib2.Request(url, data, headers)
+        if httpmethod != "": req.get_method = lambda: httpmethod
+        resp = urllib2.urlopen(req)
+        return { "requestheaders": headers, "requestbody": data, "headers": resp.info().headers, "response": resp.read(), "status": resp.getcode() }
+    except urllib2.HTTPError as e:
+        return { "requestheaders": headers, "requestbody": data, "headers": e.info().headers, "response": e.read(), "status": e.getcode() }
+    
+def post_form(url, fields, headers = {}, cookies = {}):
+    """
+    Does a form post
+    url: The http url to post to
+    fields: A map of { name: value } elements
+    headers: A map of { name: value } headers
+    return value is the http headers (a map) and server's response as a string
+    """
+    r = requests.post(url, data=fields, headers=headers, cookies=cookies)
+    return { "cookies": r.cookies, "headers": r.headers, "response": r.text, "status": r.status_code, "requestheaders": r.request.headers, "requestbody": r.request.body }
 
 class AnimalType:
     ID = 0

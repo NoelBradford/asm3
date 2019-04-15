@@ -91,12 +91,12 @@ class PostedData(object):
         else:
             return None
 
-    def integer(self, field):
+    def integer(self, field, default=0):
         """ Returns an integer key from a datafield """
         if field in self.data:
             return cint(self.data[field])
         else:
-            return 0
+            return default
 
     def integer_list(self, field):
         """
@@ -114,31 +114,31 @@ class PostedData(object):
         else:
             return []
 
-    def floating(self, field):
+    def floating(self, field, default=0.0):
         """ Returns a float key from a datafield """
         if field in self.data:
             return cfloat(self.data[field])
         else:
-            return float(0)
+            return default
 
-    def string(self, field, strip = True):
+    def string(self, field, strip=True, default=""):
         """ Returns a string key from a datafield """
         if field in self.data:
             s = encode_html(self.data[field])
             if strip: s = s.strip()
             return s
         else:
-            return ""
+            return default
 
-    def filename(self):
+    def filename(self, default=""):
         if "filechooser" in self.data:
             return encode_html(self.data.filechooser.filename)
-        return ""
+        return default
 
-    def filedata(self):
+    def filedata(self, default=""):
         if "filechooser" in self.data:
             return self.data.filechooser.value
-        return ""
+        return default
 
     def __contains__(self, key):
         return key in self.data
@@ -684,13 +684,11 @@ def escape_tinymce(content):
     (god this is confusing), which need to be double
     escaped or tinymce breaks. 
     """
-    c = content.replace("&gt;", "&amp;gt;")
+    c = strip_non_ascii(content)
+    c = c.replace("&gt;", "&amp;gt;")
     c = c.replace("&lt;", "&amp;lt;")
     c = c.replace("<", "&lt;")
     c = c.replace(">", "&gt;")
-    # TODO: this is a fix from a period where online form default header was broken
-    # and can be deleted one day.
-    c = c.replace("&lt;style\n", "&lt;style&gt;\n")
     return c
 
 class UnicodeCSVReader(object):
@@ -1028,16 +1026,18 @@ def html_email_to_plain(s):
     s = strip_html_tags(s)
     return s
 
-def send_email(dbo, replyadd, toadd, ccadd = "", subject = "", body = "", contenttype = "plain", attachmentdata = None, attachmentfname = ""):
+def send_email(dbo, replyadd, toadd, ccadd = "", bccadd = "", subject = "", body = "", contenttype = "plain", attachmentdata = None, attachmentfname = "", exceptions = True):
     """
     Sends an email.
     fromadd is a single email address
     toadd is a comma/semi-colon separated list of email addresses 
     ccadd is a comma/semi-colon separated list of email addresses
+    bccadd is a comma/semi-colon separated list of email addresses
     subject, body are strings
     contenttype is either "plain" or "html"
     attachmentdata: If an attachment should be added, the unencoded data
     attachmentfname: If an attachment should be added, the file name to give it
+    exceptions: If True, throws exceptions due to sending problems
     returns True on success
 
     For HTML emails, a plaintext part is converted and added. If the HTML
@@ -1069,9 +1069,9 @@ def send_email(dbo, replyadd, toadd, ccadd = "", subject = "", body = "", conten
         """
         value = value.replace("\n", "") # line breaks are not allowed in headers
         if value.find("&#") != -1:
-            # Is this, To/From/Cc ? If so, parse the addresses and 
+            # Is this an address field? If so, parse the addresses and 
             # encode the descriptions
-            if header == "To" or header == "From" or header == "Cc":
+            if header in ("To", "From", "Cc", "Bcc", "Bounces-To", "Reply-To"):
                 addresses = value.split(",")
                 newval = ""
                 for a in addresses:
@@ -1103,10 +1103,6 @@ def send_email(dbo, replyadd, toadd, ccadd = "", subject = "", body = "", conten
     fromadd = fromadd.replace("{organisation}", configuration.organisation(dbo))
     fromadd = fromadd.replace("{alias}", dbo.alias)
     fromadd = fromadd.replace("{database}", dbo.database)
-
-    # Sanitise semi-colons in the distribution list
-    toadd = toadd.replace(";", ",")
-    ccadd = ccadd.replace(";", ",")
 
     # Check for any problems in the reply address, such as unclosed address
     if replyadd.find("<") != -1 and replyadd.find(">") == -1:
@@ -1151,8 +1147,9 @@ def send_email(dbo, replyadd, toadd, ccadd = "", subject = "", body = "", conten
     # only the you@domain.com portion remains for us to pass to the
     # SMTP server. 
     tolist = [strip_email(x) for x in toadd.split(",")]
-    if ccadd != "":
-        tolist += [strip_email(x) for x in ccadd.split(",")]
+    if ccadd != "":  tolist += [strip_email(x) for x in ccadd.split(",")]
+    if bccadd != "": tolist += [strip_email(x) for x in bccadd.split(",")]
+
     replyadd = strip_email(replyadd)
 
     al.debug("from: %s, reply-to: %s, to: %s, subject: %s, body: %s" % \
@@ -1179,12 +1176,15 @@ def send_email(dbo, replyadd, toadd, ccadd = "", subject = "", body = "", conten
     # Use sendmail or SMTP for the transport depending on config
     if sendmail:
         try:
-            p = subprocess.Popen(["/usr/sbin/sendmail", "-t", "-oi"], stdin=subprocess.PIPE)
-            p.communicate(msg.as_string())
-            return True
+            if bccadd != "": 
+                # sendmail -t processes and removes Bcc header, where SMTP has all recipients (including Bcc) in tolist
+                add_header(msg, "Bcc", bccadd) 
+            p = subprocess.Popen(["/usr/sbin/sendmail", "-t", "-oi"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdoutdata, stderrdata = p.communicate(msg.as_string())
+            if p.returncode != 0: raise Exception("%s %s" % (stdoutdata, stderrdata))
         except Exception as err:
             al.error("sendmail: %s" % str(err), "utils.send_email", dbo)
-            return False
+            if exceptions: raise ASMError(str(err))
     else:
         try:
             smtp = smtplib.SMTP(host, port)
@@ -1193,10 +1193,9 @@ def send_email(dbo, replyadd, toadd, ccadd = "", subject = "", body = "", conten
             if password.strip() != "":
                 smtp.login(username, password)
             smtp.sendmail(fromadd, tolist, msg.as_string())
-            return True
         except Exception as err:
             al.error("smtp: %s" % str(err), "utils.send_email", dbo)
-            return False
+            if exceptions: raise ASMError(str(err))
 
 def send_bulk_email(dbo, fromadd, subject, body, rows, contenttype):
     """
@@ -1213,7 +1212,7 @@ def send_bulk_email(dbo, fromadd, subject, body, rows, contenttype):
             toadd = r["EMAILADDRESS"]
             if toadd is None or toadd.strip() == "": continue
             al.debug("sending bulk email: to=%s, subject=%s" % (toadd, ssubject), "utils.send_bulk_email", dbo)
-            send_email(dbo, fromadd, toadd, "", ssubject, sbody, contenttype)
+            send_email(dbo, fromadd, toadd, "", "", ssubject, sbody, contenttype, exceptions=False)
     thread.start_new_thread(do_send, ())
 
 def send_user_email(dbo, sendinguser, user, subject, body):
@@ -1237,11 +1236,11 @@ def send_user_email(dbo, sendinguser, user, subject, body):
         # skip if we have no email address - we can't send it.
         if u["EMAILADDRESS"] is None or u["EMAILADDRESS"].strip() == "": continue
         if user == "*":
-            send_email(dbo, fromadd, u["EMAILADDRESS"], "", subject, body)
+            send_email(dbo, fromadd, u["EMAILADDRESS"], "", "", subject, body, exceptions=False)
         elif u["USERNAME"] == user:
-            send_email(dbo, fromadd, u["EMAILADDRESS"], "", subject, body)
+            send_email(dbo, fromadd, u["EMAILADDRESS"], "", "", subject, body, exceptions=False)
         elif nulltostr(u["ROLES"]).find(user) != -1:
-            send_email(dbo, fromadd, u["EMAILADDRESS"], "", subject, body)
+            send_email(dbo, fromadd, u["EMAILADDRESS"], "", "", subject, body, exceptions=False)
 
 def pdf_count_pages(filedata):
     """

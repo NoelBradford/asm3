@@ -180,43 +180,58 @@ def delete_field(dbo, username, fid):
     Deletes the selected additional field, along with all data held by it.
     """
     dbo.delete("additionalfield", fid, username)
-    dbo.execute("DELETE FROM additional WHERE AdditionalFieldID = ?", [fid] )
+    dbo.delete("additional", "AdditionalFieldID=%d" % fid)
 
-def delete_values_for_link(dbo, linkid, linktype = "animal"):
-    """
-    Deletes all additional field values stored for a link.
-    """
-    inclause = clause_for_linktype(linktype)
-    dbo.execute("DELETE FROM additional WHERE LinkType IN (%s) AND LinkID = %d" % (inclause, linkid))
+def insert_additional(dbo, linktype, linkid, additionalfieldid, value):
+    """ Inserts an additional field record """
+    try:
+        dbo.delete("additional", "LinkType=%s AND LinkID=%s AND AdditionalFieldID=%s" % (linktype, linkid, additionalfieldid))
+        dbo.insert("additional", {
+            "LinkType":             linktype,
+            "LinkID":               linkid,
+            "AdditionalFieldID":    additionalfieldid,
+            "Value":                value
+        }, generateID=False, writeAudit=False)
+    except Exception as err:
+        al.error("Failed saving additional field: %s" % err, "additional.insert_additional", dbo, sys.exc_info())
 
-def save_values_for_link(dbo, post, linkid, linktype = "animal"):
+def save_values_for_link(dbo, post, linkid, linktype = "animal", setdefaults=False):
     """
-    Saves incoming additional field values from a form, clearing any
-    existing values first.
+    Saves incoming additional field values from a record.
+    Clears existing additional field values before saving (this is because forms
+        don't send blank values)
+    linkid: The link to the parent record
+    linktype: The class of parent record
+    setdefaults: If True, will set default values for any keys not supplied
+        (Should be True for calls from insert_X_from_form methods)
+    Keys of either a.MANDATORY.ID can be used (ASM internal forms)
+        or keys of the form additionalFIELDNAME (ASM online forms)
     """
-    delete_values_for_link(dbo, linkid, linktype)
-    af = get_field_definitions(dbo, linktype)
     l = dbo.locale
-    for f in af:
+
+    dbo.delete("additional", "LinkType IN (%s) AND LinkID=%s" % (clause_for_linktype(linktype), linkid))
+
+    for f in get_field_definitions(dbo, linktype):
+
         key = "a.%s.%s" % (f.mandatory, f.id)
-        if key in post:
-            val = post[key]
-            if f.fieldtype == YESNO:
-                val = str(post.boolean(key))
-            elif f.fieldtype == MONEY:
-                val = str(post.integer(key))
-            elif f.fieldtype == DATE:
-                if len(val.strip()) > 0 and post.date(key) is None:
-                    raise utils.ASMValidationError(_("Additional date field '{0}' contains an invalid date.", l).format(f.fieldname))
-                val = python2display(dbo.locale, post.date(key))
-            try:
-                dbo.insert("additional", {
-                    "LinkType":             f.linktype,
-                    "LinkID":               linkid,
-                    "AdditionalFieldID":    f.id,
-                    "Value":                val
-                }, generateID=False, writeAudit=False)
-            except Exception as err:
-                al.error("Failed saving additional field: %s" % err, "additional.save_values_for_link", dbo, sys.exc_info())
+        key2 = "additional%s" % f.fieldname
+
+        if key not in post and key2 not in post:
+            if setdefaults and f.DEFAULTVALUE and f.DEFAULTVALUE != "": 
+                insert_additional(dbo, f.LINKTYPE, linkid, f.ID, f.DEFAULTVALUE)
+            continue
+
+        elif key not in post: key = key2
+
+        val = post[key]
+        if f.fieldtype == YESNO:
+            val = str(post.boolean(key))
+        elif f.fieldtype == MONEY:
+            val = str(post.integer(key))
+        elif f.fieldtype == DATE:
+            if len(val.strip()) > 0 and post.date(key) is None:
+                raise utils.ASMValidationError(_("Additional date field '{0}' contains an invalid date.", l).format(f.fieldname))
+            val = python2display(dbo.locale, post.date(key))
+        insert_additional(dbo, f.LINKTYPE, linkid, f.ID, val)
 
 

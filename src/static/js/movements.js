@@ -99,6 +99,10 @@ $(function() {
                     if (row.MOVEMENTTYPE > 0 && row.RETURNDATE && format.date_js(row.RETURNDATE) <= new Date()) {
                         return true;
                     }
+                    // If the animal is deceased
+                    if (row.DECEASEDDATE) {
+                        return true;
+                    }
                 },
                 columns: [
                     { field: "MOVEMENTNAME", display: _("Type") }, 
@@ -144,12 +148,14 @@ $(function() {
                                 controller.name == "move_book_foster";
                         }
                     },
-                    { field: "TRIALENDDATE", display: _("Trial ends on"), formatter: tableform.format_date,
-                        initialsort: controller.name == "move_book_trial_adoption",
+                    { field: "TRIALENDDATE", 
+                        display: controller.name == "move_book_trial_adoption" ? _("Trial ends on") : _("Soft release ends on"), 
+                        formatter: tableform.format_date,
+                        initialsort: controller.name == "move_book_trial_adoption" || controller.name == "move_book_soft_release",
                         initialsortdirection: "desc",
                         hideif: function(row) {
-                            // Don't show this column if we aren't in the trial adoption book
-                            return controller.name != "move_book_trial_adoption";
+                            // Don't show this column if we aren't in the trial adoption book or soft release book
+                            return controller.name != "move_book_trial_adoption" && controller.name != "move_book_soft_release";
                         }
                     },
                     { field: "SPECIESNAME", display: _("Species"), 
@@ -166,7 +172,7 @@ $(function() {
                     },
                     { field: "IMAGE", display: "", 
                         formatter: function(row) {
-                            return '<a href="animal?id=' + row.ANIMALID + '"><img src=' + html.thumbnail_src(row, "animalthumb") + ' style="margin-right: 8px" class="asm-thumbnail thumbnailshadow" /></a>';
+                            return html.animal_link_thumb_bare(row);
                         },
                         hideif: function(row) {
                             // Don't show this column if we aren't a book, or the option is turned off
@@ -272,11 +278,14 @@ $(function() {
                                 if (controller.name == "move_book_recent_adoption") { $("#type").select("value", "1"); }
                                 if (controller.name == "move_book_recent_transfer") { $("#type").select("value", "3"); }
                                 if (controller.name == "move_book_retailer") { $("#type").select("value", "8"); }
+                                if (controller.name == "move_book_soft_release") { 
+                                    $("#type").select("value", "7"); 
+                                    $("#trial").prop("checked", true);
+                                }
                                 if (controller.name == "move_book_trial_adoption") { 
                                     $("#type").select("value", "1"); 
                                     $("#trial").prop("checked", true);
                                 }
-
                                 // If we're in a book other than the reservation book, set the movement date to today
                                 if (controller.name.indexOf("move_book") == 0 && controller.name != "move_book_reservation") {
                                     $("#movementdate").val(format.date(new Date()));
@@ -664,9 +673,16 @@ $(function() {
         type_change: function() {
             var mt = $("#type").val();
             // Show trial fields if option is set and the movement is an adoption
-            $("#trial").closest("tr").hide();
-            $("#trialenddate").closest("tr").hide();
             if (config.bool("TrialAdoptions") && mt == 1) {
+                $("#trial").closest("tr").find("label").html(_("Trial"));
+                $("#trialenddate").closest("tr").find("label").html(_("Trial ends on"));
+                $("#trial").closest("tr").fadeIn();
+                $("#trialenddate").closest("tr").fadeIn();
+            }
+            // Show soft release fields if option is set and the movement is a release
+            else if (config.bool("SoftReleases") && mt == 7) {
+                $("#trial").closest("tr").find("label").html(_("Soft release"));
+                $("#trialenddate").closest("tr").find("label").html(_("Soft release ends on"));
                 $("#trial").closest("tr").fadeIn();
                 $("#trialenddate").closest("tr").fadeIn();
             }
@@ -767,6 +783,7 @@ $(function() {
             else if (controller.name == "move_book_recent_transfer") { t = _("Return an animal from transfer"); }
             else if (controller.name == "move_book_reservation") { t = _("Reservation Book"); }
             else if (controller.name == "move_book_retailer") { t = _("Retailer Book"); }
+            else if (controller.name == "move_book_soft_release") { t = _("Soft release book"); }
             else if (controller.name == "move_book_trial_adoption") { t = _("Trial adoption book"); }
             else if (controller.name == "move_book_unneutered") { t = _("Unaltered Adopted Animals"); }
             return t;
@@ -781,6 +798,7 @@ $(function() {
             "move_book_recent_transfer": function() { common.module_loadandstart("movements", "move_book_recent_transfer"); },
             "move_book_reservation": function() { common.module_loadandstart("movements", "move_book_reservation"); },
             "move_book_retailer": function() { common.module_loadandstart("movements", "move_book_retailer"); },
+            "move_book_soft_release": function() { common.module_loadandstart("movements", "move_book_soft_release"); },
             "move_book_trial_adoption": function() { common.module_loadandstart("movements", "move_book_trial_adoption"); },
             "move_book_unneutered": function() { common.module_loadandstart("movements", "move_book_unneutered"); }
         }

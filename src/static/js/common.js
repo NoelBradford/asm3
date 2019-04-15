@@ -848,6 +848,7 @@
             $(".asm-numberbox").number();
             $(".asm-intbox").intnumber();
             $(".asm-ipbox").ipnumber();
+            $(".asm-latlong").latlong();
             $(".asm-timebox").time();
             $(".asm-currencybox").currency();
             $(".asm-selectbox, .asm-doubleselectbox, .asm-halfselectbox, .selectbox").select();
@@ -977,7 +978,9 @@
                 "#person": "personchooser",
                 "#retailer": "personchooser",
                 "#dialog-": "dialog",
-                "#emailform": "emailform"
+                "#emailform": "emailform",
+                "#sql": "sqleditor",
+                "#html": "htmleditor"
             };
             if (!type) {
                 $.each(types, function(k, v) {
@@ -1487,10 +1490,10 @@
                 "5": a.BREEDNAME,
                 "6": a.SPECIESNAME,
                 "7": a.ANIMALAGE});
-            s.push(common.substitute('<a href="animal?id={id}"><img title="{title}" src="{imgsrc}" class="asm-thumbnail {thumbnailclass} thumbnailshadow" /></a><br />', {
+            s.push(common.substitute('<a href="animal?id={id}"><img title="{title}" src="{imgsrc}" class="{thumbnailclasses}" /></a><br />', {
                 "id" : a.ID,
                 "title" : html.title(title),
-                "thumbnailclass": (a.SEX == 0 ? "asm-thumbnail-male" : (a.SEX == 1 ? "asm-thumbnail-female" : "")),
+                "thumbnailclasses": html.animal_link_thumb_classes(a),
                 "imgsrc" : html.thumbnail_src(a, "animalthumb") }));
             var emblems = html.animal_emblems(a, o);
             s.push(emblems);
@@ -1505,6 +1508,22 @@
                 s.push('<br /><input type="checkbox" class="animalselect" data="{id}" title="{title}" />'.replace("{id}", a.ID).replace("{title}", _("Select")));
             }
             return s.join("\n");
+        },
+
+        /**
+         * Renders a bare animal link thumbnail (just the thumbnail surrounded by a link to the record)
+         */
+        animal_link_thumb_bare: function(a) {
+            var animalid = a.ANIMALID || a.ID,
+                classes = html.animal_link_thumb_classes(a); 
+            return '<a href="animal?id=' + animalid + '"><img onerror=image_error(this) src=' + html.thumbnail_src(a, "animalthumb") + ' class="' + classes + '" /></a>';
+        },
+
+        /**
+         * Returns the classes for animal thumbnails
+         */
+        animal_link_thumb_classes: function(a) {
+            return "asm-thumbnail thumbnail-shadow " + (a.SEX == 0 ? "asm-thumbnail-male" : (a.SEX == 1 ? "asm-thumbnail-female" : ""));
         },
 
         /**
@@ -1694,10 +1713,11 @@
                 '<table class="asm-table">',
                 '<thead>',
                 '<tr>',
-                '<th>Date</th>',
-                '<th>User</th>',
-                '<th>Action</th>',
-                '<th>Details</th>',
+                '<th>' + _("Date") + '</th>',
+                '<th>' + _("User") + '</th>',
+                '<th>' + _("Action") + '</th>',
+                '<th>' + _("Table") + '</th>',
+                '<th>' + _("Details") + '</th>',
                 '</tr>',
                 '</thead>',
                 '<tbody>'
@@ -1714,6 +1734,7 @@
                 h.push('<td>' + format.date(v.AUDITDATE) + ' ' + format.time(v.AUDITDATE) + '</td>');
                 h.push('<td>' + v.USERNAME + '</td>');
                 h.push('<td>' + readableaction[v.ACTION] + '</td>');
+                h.push('<td>' + v.TABLENAME + '</td>');
                 h.push('<td>' + v.DESCRIPTION + '</td>');
                 h.push('</tr>');
             });
@@ -2354,16 +2375,13 @@
         },
 
         /**
-         * Validates one or more email addresses
-         * If a comma or semi-colon is separate, splits the value on
-         * them and validates each address.
+         * Validates one or more email addresses separated by commas.
          * Shows a global error and returns false if one or more of the addresses is invalid.
          */
         email: function(v) {
             /*jslint regexp: true */
             var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
             var rv = true;
-            if (v.indexOf(";") != -1) { v = v.replace(";", ","); }
             $.each(v.split(","), function(i, e) {
                 e = common.trim(e);
                 if (e.indexOf("<") != -1 && e.indexOf(">") != -1) { e = e.substring(e.indexOf("<")+1, e.indexOf(">")); }
@@ -2375,8 +2393,8 @@
             return rv;
         },
 
-        /* Accepts an array of ids to test whether they're zero or not
-           if they are, their label is highlighted and false is returned */
+        /** Accepts an array of ids to test whether they're zero or not
+         *  if they are, their label is highlighted and false is returned */
         notzero: function(fields) {
             var rv = true;
             $.each(fields, function(i, f) {
@@ -2391,9 +2409,28 @@
             return rv;
         },
 
-        /* Accepts an array of ids to time fields test whether they're valid
-           times. Valid values are a blank or 00:00 or 00:00:00
-           if they are invalid, their label is highlighted and false is returned */
+        /**
+         * Accepts an array of ids to email fields to test whether they're valid
+         * valid values are blank, a single email address or multiple email addresses
+         */
+        validemail: function(fields) {
+            var rv = true;
+            $.each(fields, function(i, f) {
+                var v = $("#" + f).val();
+                v = common.trim(v);
+                if (v != "" && !validate.email(v)) {
+                    validate.highlight(f);
+                    rv = false;
+                    return false;
+                }
+            });
+            return rv;
+        },
+
+        /**
+         * Accepts an array of ids to time fields test whether they're valid
+         * times. Valid values are a blank or 00:00 or 00:00:00
+         * if they are invalid, their label is highlighted and false is returned */
         validtime: function(fields) {
             var rv = true, valid1 = /^\d\d\:\d\d\:\d\d$/, valid2 = /^\d\d\:\d\d$/;
             $.each(fields, function(i, f) {

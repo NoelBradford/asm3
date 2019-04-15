@@ -12,7 +12,33 @@ LOGOUT = 5
 
 def get_audit_for_link(dbo, tablename, linkid):
     """ Returns the audit records for a particular link and table """
-    return dbo.query("SELECT * FROM audittrail WHERE tablename = ? AND linkid = ? ORDER BY AuditDate DESC", (tablename, linkid))
+    parentlinks = "%%%s=%s %%" % (tablename, linkid)
+    return dbo.query("SELECT * FROM audittrail WHERE (tablename = ? AND linkid = ?) OR parentlinks LIKE ? ORDER BY AuditDate DESC", (tablename, linkid, parentlinks))
+
+def get_parent_links(row, tablename = ""):
+    """ Reads a dict of values (insert/update values or delete resultrow) and 
+        turns foreign keys from certain tables into values for the audittrail.ParentLinks 
+        field (eg: AnimalID, OwnerID for an output of 'animal=X owner=Y ') """
+    pl = []
+    # Make values an upper-case key copy of row, since query values can be
+    # camel case and result rows are upper case
+    values = dict( (k.upper(),v) for k,v in row.items())
+    for k, v in values.iteritems():
+        if k in ( "ANIMALID", "OWNERID", "ANIMALCONTROLID" ):
+            pl.append( "%s=%s " % ( k.lower().replace("id", ""), v ))
+    if tablename == "media" and "LINKTYPEID" in values and "LINKID" in values:
+        if values["LINKTYPEID"] == 0: pl.append( "animal=%s " % values["LINKID"])
+        elif values["LINKTYPEID"] == 3: pl.append( "owner=%s " % values["LINKID"])
+        elif values["LINKTYPEID"] == 6: pl.append( "animalcontrol=%s " % values["LINKID"])
+    elif tablename == "diary" and "LINKTYPE" in values and "LINKID" in values:
+        if values["LINKTYPE"] == 1: pl.append( "animal=%s " % values["LINKID"])
+        elif values["LINKTYPE"] == 2: pl.append( "owner=%s " % values["LINKID"])
+        elif values["LINKTYPE"] == 7: pl.append( "animalcontrol=%s " % values["LINKID"])
+    elif tablename == "log" and "LINKTYPE" in values and "LINKID" in values:
+        if values["LINKTYPE"] == 0: pl.append( "animal=%s " % values["LINKID"])
+        elif values["LINKTYPE"] == 1: pl.append( "owner=%s " % values["LINKID"])
+        elif values["LINKTYPE"] == 6: pl.append( "animalcontrol=%s " % values["LINKID"])
+    return "".join(pl)
 
 def map_diff(row1, row2, ref = []):
     """
@@ -54,35 +80,35 @@ def dump_row(dbo, tablename, rowid):
 def dump_rows(dbo, tablename, condition):
     return str(dbo.query("SELECT * FROM %s WHERE %s" % (tablename, condition)))
 
-def create(dbo, username, tablename, linkid, description):
-    action(dbo, ADD, username, tablename, linkid, description)
+def create(dbo, username, tablename, linkid, parentlinks, description):
+    action(dbo, ADD, username, tablename, linkid, parentlinks, description)
 
-def edit(dbo, username, tablename, linkid, description):
-    action(dbo, EDIT, username, tablename, linkid, description)
+def edit(dbo, username, tablename, linkid, parentlinks, description):
+    action(dbo, EDIT, username, tablename, linkid, parentlinks, description)
 
-def delete(dbo, username, tablename, linkid, description):
-    action(dbo, DELETE, username, tablename, linkid, description)
+def delete(dbo, username, tablename, linkid, parentlinks, description):
+    action(dbo, DELETE, username, tablename, linkid, parentlinks, description)
 
 def delete_rows(dbo, username, tablename, condition):
     rows = dbo.query("SELECT * FROM %s WHERE %s" % (tablename, condition))
     # If there's an ID column, log an audited delete for each row
     if len(rows) > 0 and "ID" in rows[0]:
         for r in dbo.query("SELECT * FROM %s WHERE %s" % (tablename, condition)):
-            action(dbo, DELETE, username, tablename, r["ID"], dump_row(dbo, tablename, r["ID"]))
+            action(dbo, DELETE, username, tablename, r["ID"], get_parent_links(r, tablename), dump_row(dbo, tablename, r["ID"]))
     else:
         # otherwise, stuff all the deleted rows into one delete action
-        action(dbo, DELETE, username, tablename, 0, str(rows))
+        action(dbo, DELETE, username, tablename, 0, "", str(rows))
 
-def move(dbo, username, tablename, linkid, description):
-    action(dbo, MOVE, username, tablename, linkid, description)
+def move(dbo, username, tablename, linkid, parentlinks, description):
+    action(dbo, MOVE, username, tablename, linkid, parentlinks, description)
 
 def login(dbo, username, remoteip = ""):
-    action(dbo, LOGIN, username, "users", 0, "login from %s" % remoteip)
+    action(dbo, LOGIN, username, "users", 0, "", "login from %s" % remoteip)
 
 def logout(dbo, username, remoteip = ""):
-    action(dbo, LOGOUT, username, "users", 0, "logout from %s" % remoteip)
+    action(dbo, LOGOUT, username, "users", 0, "", "logout from %s" % remoteip)
 
-def action(dbo, action, username, tablename, linkid, description):
+def action(dbo, action, username, tablename, linkid, parentlinks, description):
     """
     Adds an audit record
     """
@@ -96,6 +122,7 @@ def action(dbo, action, username, tablename, linkid, description):
         "UserName":     username,
         "TableName":    tablename,
         "LinkID":       linkid,
+        "ParentLinks":  parentlinks,
         "Description":  description
     }, generateID=False, writeAudit=False)
 

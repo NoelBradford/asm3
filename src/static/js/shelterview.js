@@ -279,19 +279,19 @@ $(function() {
                             grplink = "animal_find_results?logicallocation=adoptable";
                         }
                         if (a.ADOPTIONSTATUS == _("Not For Adoption")) {
-                            grplink = "animal_find_results?logicallocation=notforadoption";
+                            grplink = "animal_find_results?logicallocation=onshelter&flags=notforadoption";
                         }
                         if (a.ADOPTIONSTATUS == _("Reserved")) {
                             grplink = "move_book_reservation";
                         }
                         if (a.ADOPTIONSTATUS == _("Cruelty Case")) {
-                            grplink = "animal_find_results?logicallocation=onshelter&showcrueltycaseonly=on";
+                            grplink = "animal_find_results?logicallocation=onshelter&flags=crueltycase";
                         }
                         if (a.ADOPTIONSTATUS == _("Hold")) {
                             grplink = "animal_find_results?logicallocation=hold";
                         }
                         if (a.ADOPTIONSTATUS == _("Quarantine")) {
-                            grplink = "animal_find_results?logicallocation=quarantine";
+                            grplink = "animal_find_results?logicallocation=onshelter&flags=quarantine";
                         }
                     }
                     if (groupfield == "CURRENTOWNERNAME" && a.CURRENTOWNERID) {
@@ -458,6 +458,9 @@ $(function() {
             else if (viewmode == "species") {
                 this.render_view("SPECIESNAME", "", "SPECIESNAME,ANIMALNAME", false, false);
             }
+            else if (viewmode == "speciescode") {
+                this.render_view("SPECIESNAME", "", "SPECIESNAME,CODE", false, false);
+            }
             else if (viewmode == "status") {
                 this.render_view("ADOPTIONSTATUS", "", "ADOPTIONSTATUS,ANIMALNAME", false, true);
             }
@@ -522,6 +525,7 @@ $(function() {
             h.push('<option value="sex">' + _("Sex") + '</option>');
             h.push('<option value="sexspecies">' + _("Sex and Species") + '</option>');
             h.push('<option value="species">' + _("Species") + '</option>');
+            h.push('<option value="speciescode">' + _("Species and Code") + '</option>');
             h.push('<option value="status">' + _("Status") + '</option>');
             h.push('<option value="statusspecies">' + _("Status and Species") + '</option>');
             h.push('<option value="type">' + _("Type") + '</option>');

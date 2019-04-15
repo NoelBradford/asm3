@@ -1,6 +1,79 @@
+42
+================
+
+12/04/19 Found should be able to support 9-digit chip numbers starting with 1
+10/04/19 Support soft release to wild #520
+06/04/19 More autocomplete hints to prevent autofill of number/curency fields
+30/03/19 Person match fields could not be set by csv import due to insert bug
+28/03/19 Add TransportReference field to link related transports together
+25/03/19 Do not update geocode on address changes if manual entry is on
+25/03/19 Add support for breeder_id PetRescue field
+24/03/19 Add en_TW2 for English/Taiwan with 2 decimal place currency
+24/03/19 Medical wordkeys should be based on NextTreatmentDue/LastTreatmentGiven
+22/03/19 Add OwnerCountry field and country to transport #264
+19/03/19 Fix conflicts with template animals and additional fields
+18/03/19 Do not show user table filters due to Chrome autofill bug
+18/03/19 Batch should update young offshelter animal ages for desex reports
+18/03/19 Support for PERSONMEMBERSHIPNUMBER CSV import column
+17/03/19 Allow editing of lat/long directly near minimaps #578
+17/03/19 Additional fields with default values disallow blanks #577
+16/03/19 Show SMTP/sendmail errors in UI
+16/03/19 Set emailerrors from_address param to prevent Google bouncing errors
+10/03/19 Datepicker, go to +3 years for some vacc/diary
+10/03/19 Tweak to default animalviewadoptable template (sans-serif, grid layout)
+07/03/19 Online forms should force absolute redirect URLs #574
+06/03/19 Emailing should support BCC #564
+06/03/19 Datepicker, allow quick selection of -30/+1 year
+05/03/19 Fix infrequent unicode error when reading stored documents from cut/paste html
+05/03/19 Add <<Jurisidiction>> person wordkey #545
+05/03/19 Rename animal comments to description for clarity #569
+05/03/19 add/subtract_years should do whole calendar years if possible
+05/03/19 Report screen doesn't display roles correctly until refresh #555
+04/03/19 Reinstate include incomplete medical items for documents
+04/03/19 Access additional fields for original, broughtinby, current owner #572
+04/03/19 Fixed view fields copying into autocomplete of tables #573
+02/03/19 Autoset of include deceased/nonshelter on find animal not working
+28/02/19 Add clinic calendar to available quicklinks
+28/02/19 MPA: Use greatest of last change/active movement to trigger updates
+21/02/19 Include media, log and diary in base record audit sliders #567
+21/02/19 Add default animalviewadoptable template
+20/02/19 Species and code mode of shelterview #548
+20/02/19 Add MostRecentEntryCategory animal token #552
+19/02/19 Make report_images match document_repository to mitigate upload bugs #556
+19/02/19 Show satellite records on audit sliders #33
+19/02/19 Validate email addresses for storage with people, reports and online forms
+19/02/19 Hide additional non-relevant fields when editing mail merges/charts
+18/02/19 Show gender border on all thumbnails #557
+18/02/19 Wordkeys: Due keyword as alternative to Recent #565
+14/02/19 Fix bug where report {tokens} can get confused with javascript
+13/02/19 Sort adoptable/shelter animal dropdowns by name on online forms
+13/02/19 Focus the correct multi-select when blank in online forms #558
+13/02/19 Remove inactive payment types/methods from clinic create payment #560
+12/02/19 <<CitationComments>> and <<AppointmentComments>> to disambiguate
+12/02/19 Fix bug that causes non-ASCII chars to break outbound emails #513
+11/02/19 Add 933* microchip range for Buddy ID
+11/02/19 Fix bug where line endings weren't translated in html_adoptable_animals
+
 41
 ================
 
+28/01/19 Make the clear tables CSV import option clearer about what it does
+25/01/19 Add quicklink for payment book
+25/01/19 Calendar view should include clinic by default
+25/01/19 Quicklink should be "receive a payment" not donation
+23/01/19 Allow additional fields to be set for person records in online forms #410
+22/01/19 Allow upto 10 animal images in animal_view
+19/01/19 Fix bugs caused by multiple preferred images in merge animal
+19/01/19 Use implant date as service date for non-shelter found registrations
+18/01/19 Allow identibase to send with blank implant date
+17/01/19 Fix bugs in linking to find results from shelterview status
+16/01/19 Default escaping of line breaks for publishers is LF
+15/01/19 Do bio processing for PetRescue
+12/01/19 Grey out deceased animals in movement books/tabs #546
+12/01/19 Use autocomplete="new-password" to work around Chrome autofill on dates
+07/01/19 Enable adoptapet for en_CA fr_CA #543
+04/01/19 Advanced person/animal search for flags should include terminator
+03/01/19 Use asm3.conf instead of sitedefs #404
 22/12/18 Add WEBSITEMEDIAFILENAME5-8 tokens for animal_view template
 14/12/18 Incoming forms: Rename Create Animal to Attach Animal (via animalname) #532
 13/12/18 PetRescue: support "good with" and "needs constant care"

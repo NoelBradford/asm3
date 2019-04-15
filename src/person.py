@@ -489,7 +489,7 @@ def get_person_find_advanced(dbo, criteria, username, includeStaff = False, incl
             elif flag == "padopter": ss.ands.append("EXISTS(SELECT OwnerID FROM adoption WHERE OwnerID = o.ID AND MovementType=1)")
             else: 
                 ss.ands.append("LOWER(o.AdditionalFlags) LIKE ?")
-                ss.values.append("%%%s%%" % flag.lower())
+                ss.values.append("%%%s|%%" % flag.lower())
 
     if "gdpr" in criteria:
         for g in criteria["gdpr"].split(","):
@@ -626,6 +626,7 @@ def insert_person_from_form(dbo, post, username, geocode=True):
         "OwnerTown":        post["town"],
         "OwnerCounty":      post["county"],
         "OwnerPostcode":    post["postcode"],
+        "OwnerCountry":     post["country"],
         "LatLong":          post["latlong"],
         "HomeTelephone":    post["hometelephone"],
         "WorkTelephone":    post["worktelephone"],
@@ -640,24 +641,24 @@ def insert_person_from_form(dbo, post, username, geocode=True):
         "FosterCapacity":   post.integer("fostercapacity"),
         "HomeCheckAreas":   post["areas"],
         "DateLastHomeChecked": post.date("homechecked"),
-        "HomeCheckedBy":    0,
-        "MatchActive":      0,
-        "MatchAdded":       None,
-        "MatchExpires":     None,
-        "MatchSex":         -1,
-        "MatchSize":        -1,
-        "MatchColour":      -1,
-        "MatchAgeFrom":     0,
-        "MatchAgeTo":       0,
-        "MatchAnimalType":  -1,
-        "MatchSpecies":     -1,
-        "MatchBreed":       -1,
-        "MatchBreed2":      -1,
-        "MatchGoodWithCats": -1,
-        "MatchGoodWithDogs": -1,
-        "MatchGoodWithChildren": -1,
-        "MatchHouseTrained": -1,
-        "MatchCommentsContain": "",
+        "HomeCheckedBy":    post.integer("homecheckedby"),
+        "MatchActive":      post.integer("matchactive"),
+        "MatchAdded":       post.date("matchadded"),
+        "MatchExpires":     post.date("matchexpires"),
+        "MatchSex":         post.integer("matchsex", -1),
+        "MatchSize":        post.integer("matchsize", -1),
+        "MatchColour":      post.integer("matchcolour", -1),
+        "MatchAgeFrom":     post.floating("agedfrom"),
+        "MatchAgeTo":       post.floating("agedto"),
+        "MatchAnimalType":  post.integer("matchtype", -1),
+        "MatchSpecies":     post.integer("matchspecies", -1),
+        "MatchBreed":       post.integer("matchbreed1", -1),
+        "MatchBreed2":      post.integer("matchbreed2", -1),
+        "MatchGoodWithCats": post.integer("matchgoodwithcats", -1),
+        "MatchGoodWithDogs": post.integer("matchgoodwithdogs", -1),
+        "MatchGoodWithChildren": post.integer("matchgoodwithchildren", -1),
+        "MatchHouseTrained": post.integer("matchhousetrained", -1),
+        "MatchCommentsContain": post["commentscontain"],
         # Flags are updated afterwards, but cannot be null
         "IDCheck":                  0,
         "ExcludeFromBulkEmail":     0,
@@ -688,7 +689,7 @@ def insert_person_from_form(dbo, post, username, geocode=True):
     update_flags(dbo, username, pid, post["flags"].split(","))
 
     # Save any additional field values given
-    additional.save_values_for_link(dbo, post, pid, "person")
+    additional.save_values_for_link(dbo, post, pid, "person", True)
 
     # If the option is on, record any GDPR contact options in the log
     if configuration.show_gdpr_contact_optin(dbo) and configuration.gdpr_contact_change_log(dbo) and post["gdprcontactoptin"] != "":
@@ -697,7 +698,7 @@ def insert_person_from_form(dbo, post, username, geocode=True):
             "%s" % (newvalue))
 
     # Look up a geocode for the person's address
-    if geocode: update_geocode(dbo, pid, "", post["address"], post["town"], post["county"], post["postcode"])
+    if geocode: update_geocode(dbo, pid, "", post["address"], post["town"], post["county"], post["postcode"], post["country"])
 
     return pid
 
@@ -737,6 +738,7 @@ def update_person_from_form(dbo, post, username, geocode=True):
         "OwnerTown":        post["town"],
         "OwnerCounty":      post["county"],
         "OwnerPostcode":    post["postcode"],
+        "OwnerCountry":     post["country"],
         "LatLong":          post["latlong"],
         "HomeTelephone":    post["hometelephone"],
         "WorkTelephone":    post["worktelephone"],
@@ -778,7 +780,7 @@ def update_person_from_form(dbo, post, username, geocode=True):
     additional.save_values_for_link(dbo, post, pid, "person")
 
     # Check/update the geocode for the person's address
-    if geocode: update_geocode(dbo, pid, post["latlong"], post["address"], post["town"], post["county"], post["postcode"])
+    if geocode: update_geocode(dbo, pid, post["latlong"], post["address"], post["town"], post["county"], post["postcode"], post["country"])
 
 def update_flags(dbo, username, personid, flags):
     """
@@ -848,6 +850,7 @@ def merge_person_details(dbo, username, personid, d, force=False):
     merge("town", "OWNERTOWN")
     merge("county", "OWNERCOUNTY")
     merge("postcode", "OWNERPOSTCODE")
+    merge("country", "OWNERCOUNTRY")
     merge("hometelephone", "HOMETELEPHONE")
     merge("worktelephone", "WORKTELEPHONE")
     merge("mobiletelephone", "MOBILETELEPHONE")
@@ -916,6 +919,7 @@ def merge_person(dbo, username, personid, mergepersonid):
     mp["town"] = mp.OWNERTOWN
     mp["county"] = mp.OWNERCOUNTY
     mp["postcode"] = mp.OWNERPOSTCODE
+    mp["country"] = mp.OWNERCOUNTRY
     mp["hometelephone"] = mp.HOMETELEPHONE
     mp["worktelephone"] = mp.WORKTELEPHONE
     mp["mobiletelephone"] = mp.MOBILETELEPHONE
@@ -1013,7 +1017,7 @@ def update_pass_homecheck(dbo, user, personid, comments):
         com += "\n" + comments
         dbo.update("owner", personid, { "Comments": "%s\n%s" % (com, comments) }, user)
 
-def update_geocode(dbo, personid, latlon="", address="", town="", county="", postcode=""):
+def update_geocode(dbo, personid, latlon="", address="", town="", county="", postcode="", country=""):
     """
     Looks up the geocode for this person with the address info given.
     If latlon is already set to a value, checks the address hash to see if it
@@ -1021,18 +1025,25 @@ def update_geocode(dbo, personid, latlon="", address="", town="", county="", pos
     """
     # If an address hasn't been specified, look it up from the personid given
     if address == "":
-        row = dbo.first_row(dbo.query("SELECT OwnerAddress, OwnerTown, OwnerCounty, OwnerPostcode FROM owner WHERE ID=?", [personid]))
+        row = dbo.first_row(dbo.query("SELECT OwnerAddress, OwnerTown, OwnerCounty, OwnerPostcode, OwnerCountry FROM owner WHERE ID=?", [personid]))
         address = row.OWNERADDRESS
         town = row.OWNERTOWN
         county = row.OWNERCOUNTY
         postcode = row.OWNERPOSTCODE
+        country = row.OWNERCOUNTRY
+    # If we're allowing manual entry of latlon values and we have a non-empty
+    # value, do nothing so that changes to address don't overwrite it
+    # If someone has deleted the values, a latlon of ,,HASH is returned so
+    # we allow the geocode to be regenerated in that case.
+    if configuration.show_lat_long(dbo) and latlon is not None and latlon != "" and not latlon.startswith(",,"):
+        return latlon
     # If a latlon has been passed and it contains a hash of the address elements,
     # then the address hasn't changed since the last geocode was done - do nothing
     if latlon is not None and latlon != "":
-        if latlon.find(geo.address_hash(address, town, county, postcode)) != -1:
+        if latlon.find(geo.address_hash(address, town, county, postcode, country)) != -1:
             return latlon
     # Do the geocode
-    latlon = geo.get_lat_long(dbo, address, town, county, postcode)
+    latlon = geo.get_lat_long(dbo, address, town, county, postcode, country)
     update_latlong(dbo, personid, latlon)
     return latlon
 
@@ -1155,11 +1166,12 @@ def send_email_from_form(dbo, username, post):
     emailfrom = post["from"]
     emailto = post["to"]
     emailcc = post["cc"]
+    emailbcc = post["bcc"]
     subject = post["subject"]
     addtolog = post.boolean("addtolog")
     logtype = post.integer("logtype")
     body = post["body"]
-    rv = utils.send_email(dbo, emailfrom, emailto, emailcc, subject, body, "html")
+    rv = utils.send_email(dbo, emailfrom, emailto, emailcc, emailbcc, subject, body, "html")
     if addtolog == 1:
         log.add_log(dbo, username, log.PERSON, post.integer("personid"), logtype, utils.html_email_to_plain(body))
     return rv

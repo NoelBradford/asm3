@@ -113,7 +113,7 @@ def set_excluded(dbo, username, mid, exclude = 1):
     """
     Marks the media with id excluded from publishing.
     """
-    dbo.update("media", mid, { "ExcludeFromPublish": exclude }, username, setLastChanged=False)
+    dbo.update("media", mid, { "ExcludeFromPublish": exclude, "Date": dbo.now() }, username, setLastChanged=False)
 
 def get_name_for_id(dbo, mid):
     return dbo.query_string("SELECT MediaName FROM media WHERE ID = ?", [mid])
@@ -585,7 +585,7 @@ def rotate_media(dbo, username, mid, clockwise = True):
     dbfs.put_string(dbo, mn, path, imagedata)
     # Update the date stamp on the media record
     dbo.update("media", mid, { "Date": dbo.now(), "MediaSize": len(imagedata) })
-    audit.edit(dbo, username, "media", mid, "media id %d rotated, clockwise=%s" % (mid, str(clockwise)))
+    audit.edit(dbo, username, "media", mid, "", "media id %d rotated, clockwise=%s" % (mid, str(clockwise)))
 
 def scale_image(imagedata, resizespec):
     """

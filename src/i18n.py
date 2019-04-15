@@ -8,8 +8,8 @@ import utils
 # flake8: noqa - we have a lot of locales and this is convenient
 from locales import *
 
-VERSION = "41u [Sat 22 Dec 14:28:28 GMT 2018]"
-BUILD = "12221428"
+VERSION = "42u [Sun 14 Apr 09:48:49 BST 2019]"
+BUILD = "04140948"
 
 DMY = ( "%d/%m/%Y", "%d/%m/%y" )
 MDY = ( "%m/%d/%Y", "%m/%d/%y" )
@@ -91,6 +91,7 @@ locale_maps = {
     "en_NZ":    ( "English", "New Zealand", DMY, DOLLAR, PLURAL_ENGLISH, CURRENCY_PREFIX, 2, ".", "," ),
     "en_TH":    ( "English", "Thailand", DMY, "&#x0e3f;", PLURAL_ENGLISH, CURRENCY_PREFIX, 2, ".", "," ),
     "en_TW":    ( "English", "Taiwan", DMY, DOLLAR, PLURAL_ENGLISH, CURRENCY_PREFIX, 0, ".", "," ),
+    "en_TW2":   ( "English", "Taiwan $0.00", DMY, DOLLAR, PLURAL_ENGLISH, CURRENCY_PREFIX, 2, ".", "," ),
     "en_VN":    ( "English", "Vietnam", DMY, "&#8363;", PLURAL_ENGLISH, CURRENCY_PREFIX, 2, ".", "," ),
     "en_ZA":    ( "English", "South Africa", YMD, "R", PLURAL_ENGLISH, CURRENCY_PREFIX, 2, ",", " "),
     "bg":       ( "Bulgarian", "Bulgaria", DMY, "&#x043b;&#x0432;", PLURAL_ENGLISH, CURRENCY_SUFFIX, 2, ",", " "),
@@ -468,7 +469,8 @@ def add_years(date, years = 1.0):
     Adds years to a date, returning a new datetime
     """
     if date is None: return None
-    return date + datetime.timedelta(days = int(years * 365))
+    if years == int(years): return date.replace( year = date.year + int(years))
+    return date + datetime.timedelta(days = int(years * 365.0))
 
 def add_days(date, nodays = 1):
     """
@@ -510,7 +512,8 @@ def subtract_years(date, years = 1.0):
     Subtracts years from date, returning a new datetime
     """
     if date is None: return None
-    return date - datetime.timedelta(days = int(years * 365))
+    if years == int(years): return date.replace( year = date.year - int(years))
+    return date - datetime.timedelta(days = int(years * 365.0))
 
 def subtract_months(date, months = 1):
     """

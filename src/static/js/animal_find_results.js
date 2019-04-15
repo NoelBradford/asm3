@@ -155,7 +155,7 @@ $(function() {
                 "HeartwormTestResult":  _("Heartworm"),
                 "Declawed":  _("Declawed"),
                 "HiddenAnimalDetails":  _("Hidden"),
-                "AnimalComments":  _("Comments"),
+                "AnimalComments":  _("Description"),
                 "ReasonForEntry":  _("Entry Reason"),
                 "ReasonNO":  _("Reason Not From Owner"),
                 "DateBroughtIn":  _("Brought In"),
@@ -280,7 +280,7 @@ $(function() {
                 else { rv = _("Unknown"); }
             }
             else if ( name == "Image" ) {
-                rv = "<img class=\"asm-thumbnail thumbnailshadow\" src=\"" + html.thumbnail_src(row, "animalthumb") + "\" />";
+                rv = html.animal_link_thumb_bare(row);
             }
             else if (add) {
                 $.each(add, function(i, v) {

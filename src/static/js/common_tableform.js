@@ -358,7 +358,15 @@
 
             // Apply tablesorter widget
             var options = {};
-            if (table.showfilter || (table.rows && table.rows.length > 9)) { options.filter = true; }
+            // If whether or not to show filters is explicitly set, do that
+            options.filter = false;
+            if (table.hasOwnProperty("showfilter")) { 
+                options.filter = table.showfilter; 
+            }
+            // Otherwise, show the filters if there are 10+ rows in the table
+            else if (table.rows && table.rows.length > 9) { 
+                options.filter = true; 
+            }
             $("#tableform").table(options);
 
             // And the default sort
@@ -891,7 +899,7 @@
          *        justwidget: false, (output tr/td/label)
          *        defaultval: expression or function to evaluate.
          *        height/width/margintop: "css expr",
-         *        validation: "notblank|notzero",
+         *        validation: "notblank|notzero|validemail",
          *        classes: "extraclass anotherone",
          *        tooltip: _("Text"), 
          *        callout: _("Text"), mixed markup allowed
@@ -940,6 +948,7 @@
                     if (v.halfsize) { d += " asm-halftextbox"; }
                     d += "\" ";
                     d += "data-json=\"" + v.json_field + "\" data-post=\"" + v.post_field + "\" ";
+                    d += "autocomplete=\"new-password\" ";
                     if (v.readonly) { d += " data-noedit=\"true\" "; }
                     if (v.validation) { d += "data-validation=\"" + v.validation + "\" "; }
                     if (v.tooltip) { d += "title=\"" + html.title(v.tooltip) + "\""; }
@@ -1029,7 +1038,7 @@
                     if (!v.justwidget) { d += "<tr><td><label for=\"" + v.post_field + "\">" + v.label + "</label>" + callout + "</td><td>"; }
                     d += "<input id=\"" + v.post_field + "\" type=\"text\" class=\"asm-textbox asm-datebox\" ";
                     d += "data-json=\"" + v.json_field + "\" data-post=\"" + v.post_field + "\" ";
-                    d += "autocomplete=\"off\" ";
+                    d += "autocomplete=\"new-password\" ";
                     if (v.readonly) { d += " data-noedit=\"true\" "; }
                     if (v.validation) { d += "data-validation=\"" + v.validation + "\" "; }
                     if (v.tooltip) { d += "title=\"" + html.title(v.tooltip) + "\""; }
@@ -1042,7 +1051,7 @@
                     if (v.halfsize) { d += " asm-halftextbox"; }
                     d += "\" ";
                     d += "data-json=\"" + v.json_field + "\" data-post=\"" + v.post_field + "\" ";
-                    d += "autocomplete=\"off\" ";
+                    d += "autocomplete=\"new-password\" ";
                     if (v.readonly) { d += " data-noedit=\"true\" "; }
                     if (v.validation) { d += "data-validation=\"" + v.validation + "\" "; }
                     if (v.tooltip) { d += "title=\"" + html.title(v.tooltip) + "\""; }
@@ -1054,7 +1063,7 @@
                     d += "<span style=\"white-space: nowrap\">";
                     d += "<input id=\"" + v.post_field + "date\" type=\"text\" class=\"asm-textbox asm-datebox asm-halftextbox\" ";
                     d += "data-json=\"" + v.json_field + "\" data-post=\"" + v.post_field + "date\" ";
-                    d += "autocomplete=\"off\" ";
+                    d += "autocomplete=\"new-password\" ";
                     if (v.readonly) { d += " data-noedit=\"true\" "; }
                     if (v.validation) { d += "data-validation=\"" + v.validation + "\" "; }
                     if (v.tooltip) { d += "title=\"" + html.title(v.tooltip) + "\""; }
@@ -1062,7 +1071,7 @@
                     d += "<input id=\"" + v.post_field + "time\" type=\"text\" class=\"asm-textbox asm-timebox asm-halftextbox";
                     d += "\" ";
                     d += "data-json=\"" + v.json_field + "\" data-post=\"" + v.post_field + "time\" ";
-                    d += "autocomplete=\"off\" ";
+                    d += "autocomplete=\"new-password\" ";
                     if (v.readonly) { d += " data-noedit=\"true\" "; }
                     if (v.validation) { d += "data-validation=\"" + v.validation + "\" "; }
                     if (v.tooltip) { d += "title=\"" + html.title(v.tooltip) + "\""; }
@@ -1076,6 +1085,7 @@
                     if (v.halfsize) { d += " asm-halftextbox"; }
                     d += "\" ";
                     d += "data-json=\"" + v.json_field + "\" data-post=\"" + v.post_field + "\" ";
+                    d += "autocomplete=\"new-password\" ";
                     if (v.readonly) { d += " data-noedit=\"true\" "; }
                     if (v.validation) { d += "data-validation=\"" + v.validation + "\" "; }
                     if (v.tooltip) { d += "title=\"" + html.title(v.tooltip) + "\""; }
@@ -1088,6 +1098,7 @@
                     if (v.halfsize) { d += " asm-halftextbox"; }
                     d += "\" ";
                     d += "data-json=\"" + v.json_field + "\" data-post=\"" + v.post_field + "\" ";
+                    d += "autocomplete=\"new-password\" ";
                     if (v.readonly) { d += " data-noedit=\"true\" "; }
                     if (v.validation) { d += "data-validation=\"" + v.validation + "\" "; }
                     if (v.tooltip) { d += "title=\"" + html.title(v.tooltip) + "\""; }
@@ -1100,6 +1111,7 @@
                     if (v.halfsize) { d += " asm-halftextbox"; }
                     d += "\" ";
                     d += "data-json=\"" + v.json_field + "\" data-post=\"" + v.post_field + "\" ";
+                    d += "autocomplete=\"new-password\" ";
                     if (v.readonly) { d += " data-noedit=\"true\" "; }
                     if (v.validation) { d += "data-validation=\"" + v.validation + "\" "; }
                     if (v.tooltip) { d += "title=\"" + html.title(v.tooltip) + "\""; }
@@ -1411,9 +1423,7 @@
          * row: The json row to use
          */
         fields_validate: function(fields) {
-            var nbids = [];
-            var nzids = [];
-            var ntids = [];
+            var nbids = [], nzids = [], veids = [], vtids = [];
             $.each(fields, function(i, v) {
                 $("label[for='" + v.post_field + "']").removeClass(validate.ERROR_LABEL_CLASS);
                 if (v.validation == "notblank") {
@@ -1422,8 +1432,11 @@
                 if (v.validation == "notzero") {
                     nzids.push(v.post_field);
                 }
+                if (v.validation == "validemail") {
+                    veids.push(v.post_field);
+                }
                 if (v.type == "time") {
-                    ntids.push(v.post_field);
+                    vtids.push(v.post_field);
                 }
             });
             var rv = true;
@@ -1435,8 +1448,12 @@
                 rv = validate.notzero(nzids);
                 if (!rv) { return rv; }
             }
-            if (ntids.length > 0) {
-                rv = validate.validtime(ntids);
+            if (vtids.length > 0) {
+                rv = validate.validtime(vtids);
+                if (!rv) { return rv; }
+            }
+            if (veids.length > 0) {
+                rv = validate.validemail(veids);
                 if (!rv) { return rv; }
             }
             return true;

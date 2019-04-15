@@ -39,7 +39,7 @@ class FoundAnimalsPublisher(FTPPublisher):
             self.cleanup()
             return
 
-        animals = get_microchip_data(self.dbo, ["9", "0"], "foundanimals", allowintake=True, organisation_email=email)
+        animals = get_microchip_data(self.dbo, ["9", "0", "1"], "foundanimals", allowintake=True, organisation_email=email)
         if len(animals) == 0:
             self.setLastError("No animals found to publish.")
             self.cleanup(save_log=False)
@@ -92,6 +92,7 @@ class FoundAnimalsPublisher(FTPPublisher):
                     continue
 
                 servicedate = an["ACTIVEMOVEMENTDATE"] or an["MOSTRECENTENTRYDATE"]
+                if an["NONSHELTERANIMAL"] == 1: servicedate = an["IDENTICHIPDATE"]
                 if servicedate < self.dbo.today(offset=-365*3):
                     self.logError("Service date is older than 3 years, ignoring")
                     continue
